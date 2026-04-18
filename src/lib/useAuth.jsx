@@ -7,6 +7,7 @@ import {
 } from 'firebase/auth';
 import { doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db, firebaseReady } from './firebase';
+import { getApprovedCategoriesFromSkills } from './skillToCategoryMap';
 
 const AuthContext = createContext(null);
 
@@ -114,6 +115,29 @@ export function AuthProvider({ children }) {
     if (!firebaseReady) return;
     await signOut(auth);
   }
+async function updateTeenSkills(skillIds) {
+    if (!firebaseReady || !currentUser) {
+      throw new Error('Firebase is not configured or user not authenticated.');
+    }
+
+    const approvedCategories = getApprovedCategoriesFromSkills(skillIds);
+    const interests = skillIds.map((id) => id.replace(/^[a-z_]+_/, '').replace(/_/g, ' ')).map((s) => s.charAt(0).toUpperCase() + s.slice(1));
+
+    const userRef = doc(db, 'users', currentUser.uid);
+    await setDoc(
+      userRef,
+      {
+        skills: skillIds,
+        interests,
+        approvedCategories,
+        surveyCompleted: true,
+        surveyCompletedAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+
+    return profile;
+  }
 
   const value = useMemo(
     () => ({
@@ -123,6 +147,7 @@ export function AuthProvider({ children }) {
       signup,
       login,
       logout,
+      updateTeenSkills,
       isAuthenticated: Boolean(currentUser),
       role: profile?.role || null,
       firstName: profile?.fullName ? getFirstName(profile.fullName) : ''

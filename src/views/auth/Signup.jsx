@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/useAuth';
 
@@ -21,13 +21,25 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Auto-redirect once profile is loaded after signup
+  useEffect(() => {
+    if (!auth?.loading && auth?.isAuthenticated && auth?.role) {
+      // For teens, go to survey (they haven't completed it yet), otherwise go to dashboard
+      if (auth.role === 'teen') {
+        navigate('/teen/survey', { replace: true });
+      } else {
+        navigate(`/${auth.role}`, { replace: true });
+      }
+    }
+  }, [auth?.loading, auth?.isAuthenticated, auth?.role, navigate]);
+
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
     setError('');
     try {
       await auth.signup({ email, password, fullName, role, dateOfBirth, address, parentEmail });
-      navigate('/', { replace: true });
+      // Profile will load asynchronously, and useEffect above will handle navigation
     } catch (currentError) {
       setError(getReadableAuthError(currentError));
     } finally {

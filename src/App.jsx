@@ -9,6 +9,7 @@ import Login from './views/auth/Login';
 import Signup from './views/auth/Signup';
 import RoleSelect from './views/auth/RoleSelect';
 import Landing from './views/public/Landing';
+import SkillsSurvey from './views/teen/SkillsSurvey';
 import TeenDashboard from './views/teen/TeenDashboard';
 import TaskDetail from './views/teen/TaskDetail';
 import ActiveTask from './views/teen/ActiveTask';
@@ -16,8 +17,10 @@ import Earnings from './views/teen/Earnings';
 import TeenProfile from './views/teen/TeenProfile';
 import ParentDashboard from './views/parent/ParentDashboard';
 import ParentSettings from './views/parent/ParentSettings';
+import TaskDetailReadOnly from './views/parent/TaskDetailReadOnly';
 import NeighborDashboard from './views/neighbor/NeighborDashboard';
 import PostTask from './views/neighbor/PostTask';
+import BulkTaskSchedule from './views/neighbor/BulkTaskSchedule';
 import NeighborTaskDetail from './views/neighbor/NeighborTaskDetail';
 
 function RequireAuth({ children }) {
@@ -49,6 +52,16 @@ function RequireRole({ role, children }) {
   return children;
 }
 
+function RequireSurveyComplete({ children }) {
+  const auth = useAuth();
+
+  if (auth?.role === 'teen' && !auth?.profile?.surveyCompleted) {
+    return <Navigate to="/teen/survey" replace />;
+  }
+
+  return children;
+}
+
 export default function App() {
   useEffect(() => {
     if (!firebaseReady) return;
@@ -62,11 +75,35 @@ export default function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/signup/role" element={<RoleSelect />} />
       <Route
+        path="/teen/survey"
+        element={
+          <RequireAuth>
+            <RequireRole role="teen">
+              <SkillsSurvey />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/teen"
         element={
           <RequireAuth>
             <RequireRole role="teen">
-              <TeenDashboard />
+              <RequireSurveyComplete>
+                <TeenDashboard />
+              </RequireSurveyComplete>
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/teen/dashboard"
+        element={
+          <RequireAuth>
+            <RequireRole role="teen">
+              <RequireSurveyComplete>
+                <TeenDashboard />
+              </RequireSurveyComplete>
             </RequireRole>
           </RequireAuth>
         }
@@ -76,7 +113,9 @@ export default function App() {
         element={
           <RequireAuth>
             <RequireRole role="teen">
-              <TaskDetail />
+              <RequireSurveyComplete>
+                <TaskDetail />
+              </RequireSurveyComplete>
             </RequireRole>
           </RequireAuth>
         }
@@ -86,7 +125,9 @@ export default function App() {
         element={
           <RequireAuth>
             <RequireRole role="teen">
-              <ActiveTask />
+              <RequireSurveyComplete>
+                <ActiveTask />
+              </RequireSurveyComplete>
             </RequireRole>
           </RequireAuth>
         }
@@ -96,7 +137,9 @@ export default function App() {
         element={
           <RequireAuth>
             <RequireRole role="teen">
-              <Earnings />
+              <RequireSurveyComplete>
+                <Earnings />
+              </RequireSurveyComplete>
             </RequireRole>
           </RequireAuth>
         }
@@ -106,7 +149,9 @@ export default function App() {
         element={
           <RequireAuth>
             <RequireRole role="teen">
-              <TeenProfile />
+              <RequireSurveyComplete>
+                <TeenProfile />
+              </RequireSurveyComplete>
             </RequireRole>
           </RequireAuth>
         }
@@ -132,6 +177,16 @@ export default function App() {
         }
       />
       <Route
+        path="/parent/task/:taskId"
+        element={
+          <RequireAuth>
+            <RequireRole role="parent">
+              <TaskDetailReadOnly />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/neighbor"
         element={
           <RequireAuth>
@@ -147,6 +202,16 @@ export default function App() {
           <RequireAuth>
             <RequireRole role="neighbor">
               <PostTask />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/neighbor/bulk-schedule"
+        element={
+          <RequireAuth>
+            <RequireRole role="neighbor">
+              <BulkTaskSchedule />
             </RequireRole>
           </RequireAuth>
         }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PageState from '../../components/PageState';
 import { useAuth } from '../../lib/useAuth';
@@ -11,13 +11,25 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Auto-redirect once profile is loaded after login
+  useEffect(() => {
+    if (!auth?.loading && auth?.isAuthenticated && auth?.role) {
+      // For teens, go to survey if not completed, otherwise dashboard
+      if (auth.role === 'teen') {
+        navigate(auth.profile?.surveyCompleted ? '/teen' : '/teen/survey', { replace: true });
+      } else {
+        navigate(`/${auth.role}`, { replace: true });
+      }
+    }
+  }, [auth?.loading, auth?.isAuthenticated, auth?.role, auth?.profile?.surveyCompleted, navigate]);
+
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
     setError('');
     try {
       await auth.login(email, password);
-      navigate('/', { replace: true });
+      // Profile will load asynchronously, and useEffect above will handle navigation
     } catch (currentError) {
       setError(getReadableAuthError(currentError));
     } finally {

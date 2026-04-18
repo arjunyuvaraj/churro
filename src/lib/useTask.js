@@ -67,6 +67,32 @@ export function useUserTasks(uid, role) {
   return useFirestoreCollection('tasks', constraints, Boolean(uid));
 }
 
+export function useTaskById(taskId) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!taskId || !firebaseReady || !db) {
+      setLoading(false);
+      setData(null);
+      return undefined;
+    }
+
+    const taskRef = doc(db, 'tasks', taskId);
+    return onSnapshot(taskRef, (snapshot) => {
+      setData(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+      setLoading(false);
+    });
+  }, [taskId]);
+
+  return { data, loading };
+}
+
+export function useCompletedTasksByTeen(teenUid) {
+  const constraints = useMemo(() => (teenUid ? [where('applicantTeenUid', '==', teenUid), where('status', '==', 'completed'), orderBy('completedAt', 'desc')] : []), [teenUid]);
+  return useFirestoreCollection('tasks', constraints, Boolean(teenUid));
+}
+
 async function createNotification(notification) {
   if (!notification.recipientUid) return;
   await addDoc(collection(db, 'notifications'), {
