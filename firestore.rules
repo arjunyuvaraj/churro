@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isTeen() {
+      return isSignedIn() && userDoc().data.role == 'teen';
+    }
+
+    function isParent() {
+      return isSignedIn() && userDoc().data.role == 'parent';
+    }
+
+    function isNeighbor() {
+      return isSignedIn() && userDoc().data.role == 'neighbor';
+    }
+
+    function parentLinkedToTeen(teenUid) {
+      return isParent() && userDoc().data.linkedTeenUid == teenUid;
+    }
+
+    function teenLinkedToParent(parentUid) {
+      return isTeen() && userDoc().data.linkedParentUid == parentUid;
+    }
+
+    function teenCanSeeOpenTask() {
+      return resource.data.status == 'open' &&
+        resource.data.applicantTeenUid == null &&
+        (
+          userDoc().data.age >= 16 ||
+          (
+            resource.data.category != 'yard_power' &&
+            resource.data.category != 'moving_help' &&
+            resource.data.requiresPowerTools == false &&
+            resource.data.startTime >= '07:00' &&
+            resource.data.startTime <= '19:00'
+          )
+        );
+    }
+
+    match /users/{userId} {
+      allow read, write: if isSelf(userId);
+      allow create: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isSignedIn() && (
+        (isTeen() && teenCanSeeOpenTask()) ||
+        (isParent() && resource.data.applicantTeenUid == userDoc().data.linkedTeenUid) ||
+        (isNeighbor() && resource.data.neighborUid == request.auth.uid)
+      );
+
+      allow create: if isNeighbor() && request.resource.data.neighborUid == request.auth.uid;
+
+      allow update: if isSignedIn() && (
+        (isTeen() && resource.data.status == 'open' && resource.data.applicantTeenUid == null && request.resource.data.applicantTeenUid == request.auth.uid && request.resource.data.status == 'pending_parent_approval' && request.resource.data.diff(resource.data).changedKeys().hasOnly(['applicantTeenUid', 'status', 'teenName', 'teenCheckInStatus'])) ||
+        (isTeen() && resource.data.applicantTeenUid == request.auth.uid && (resource.data.status == 'active' || resource.data.status == 'in_progress' || resource.data.status == 'pending_confirmation') && request.resource.data.teenCheckInStatus in ['on_the_way', 'arrived', 'done'] && request.resource.data.diff(resource.data).changedKeys().hasOnly(['teenCheckInStatus', 'status'])) ||
+        (isParent() && resource.data.applicantTeenUid == userDoc().data.linkedTeenUid) ||
+        (isNeighbor() && resource.data.neighborUid == request.auth.uid)
+      );
+    }
+
+    match /ratings/{ratingId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read, update: if isSignedIn() && resource.data.recipientUid == request.auth.uid;
+      allow create: if isSignedIn();
+      allow delete: if false;
+    }
+  }
+}
