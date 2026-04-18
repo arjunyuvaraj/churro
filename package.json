@@ -8,7 +8,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "firebase:login": "npx -y firebase-tools login",
+    "firebase:login:add": "npx -y firebase-tools login:add",
+    "firebase:logout": "npx -y firebase-tools logout",
+    "firebase:whoami": "npx -y firebase-tools login:list",
+    "firebase:use": "npx -y firebase-tools use",
+    "firebase:auth:check": "node scripts/check-firebase-auth.mjs",
+    "firebase:mcp": "npx -y firebase-tools mcp --dir .",
+    "firebase:emulators": "npx -y firebase-tools emulators:start"
   },
   "dependencies": {
     "firebase": "^12.12.0",

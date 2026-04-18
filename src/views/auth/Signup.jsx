@@ -29,7 +29,7 @@ export default function Signup() {
       await auth.signup({ email, password, fullName, role, dateOfBirth, address, parentEmail });
       navigate('/', { replace: true });
     } catch (currentError) {
-      setError(currentError.message || 'Unable to create account.');
+      setError(getReadableAuthError(currentError));
     } finally {
       setLoading(false);
     }
@@ -98,4 +98,15 @@ export default function Signup() {
       </div>
     </div>
   );
+}
+
+function getReadableAuthError(error) {
+  const message = error?.message || '';
+  if (message.includes('auth/configuration-not-found') || message.includes('CONFIGURATION_NOT_FOUND')) {
+    return 'Firebase Auth is not enabled for this project yet. Open Firebase Console -> Authentication -> Get started -> enable Email/Password, then retry.';
+  }
+  if (message.includes('auth/operation-not-allowed')) {
+    return 'Email/password sign-in is disabled. Enable it in Firebase Console -> Authentication -> Sign-in method.';
+  }
+  return message || 'Unable to create account.';
 }

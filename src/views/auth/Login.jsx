@@ -19,7 +19,7 @@ export default function Login() {
       await auth.login(email, password);
       navigate('/', { replace: true });
     } catch (currentError) {
-      setError(currentError.message || 'Unable to sign in.');
+      setError(getReadableAuthError(currentError));
     } finally {
       setLoading(false);
     }
@@ -57,4 +57,15 @@ export default function Login() {
       </div>
     </div>
   );
+}
+
+function getReadableAuthError(error) {
+  const message = error?.message || '';
+  if (message.includes('auth/configuration-not-found') || message.includes('CONFIGURATION_NOT_FOUND')) {
+    return 'Firebase Auth is not enabled for this project yet. Open Firebase Console -> Authentication -> Get started -> enable Email/Password, then retry.';
+  }
+  if (message.includes('auth/operation-not-allowed')) {
+    return 'Email/password sign-in is disabled. Enable it in Firebase Console -> Authentication -> Sign-in method.';
+  }
+  return message || 'Unable to sign in.';
 }
