@@ -11,17 +11,18 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Auto-redirect once profile is loaded after login
   useEffect(() => {
-    if (!auth?.loading && auth?.isAuthenticated && auth?.role) {
-      // For teens, go to survey if not completed, otherwise dashboard
-      if (auth.role === 'teen') {
-        navigate(auth.profile?.surveyCompleted ? '/teen' : '/teen/survey', { replace: true });
+    if (!auth) return;
+    
+    if (!auth.loading && auth.isAuthenticated && auth.profile?.role) {
+      const targetRole = auth.profile.role;
+      if (targetRole === 'teen' && !auth.profile.surveyCompleted) {
+        navigate('/teen/survey', { replace: true });
       } else {
-        navigate(`/${auth.role}`, { replace: true });
+        navigate(`/${targetRole}`, { replace: true });
       }
     }
-  }, [auth?.loading, auth?.isAuthenticated, auth?.role, auth?.profile?.surveyCompleted, navigate]);
+  }, [auth, navigate]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -29,9 +30,8 @@ export default function Login() {
     setError('');
     try {
       await auth.login(email, password);
-      // Profile will load asynchronously, and useEffect above will handle navigation
-    } catch (currentError) {
-      setError(getReadableAuthError(currentError));
+    } catch (err) {
+      setError(getReadableAuthError(err));
     } finally {
       setLoading(false);
     }

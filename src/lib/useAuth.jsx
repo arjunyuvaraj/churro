@@ -27,10 +27,12 @@ export function AuthProvider({ children }) {
     }
 
     let unsubscribeProfile = () => {};
+    let profileLoadingTimeout = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       setCurrentUser(firebaseUser);
       unsubscribeProfile();
+      clearTimeout(profileLoadingTimeout);
 
       if (!firebaseUser || !db) {
         setProfile(null);
@@ -40,14 +42,20 @@ export function AuthProvider({ children }) {
 
       const userRef = doc(db, 'users', firebaseUser.uid);
       unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
-        setProfile(snapshot.exists() ? snapshot.data() : null);
+        const profileData = snapshot.exists() ? snapshot.data() : null;
+        setProfile(profileData);
         setLoading(false);
       });
+
+      profileLoadingTimeout = setTimeout(() => {
+        setLoading(false);
+      }, 3000);
     });
 
     return () => {
       unsubscribeProfile();
       unsubscribeAuth();
+      clearTimeout(profileLoadingTimeout);
     };
   }, []);
 

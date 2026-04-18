@@ -23,15 +23,16 @@ export default function Signup() {
 
   // Auto-redirect once profile is loaded after signup
   useEffect(() => {
-    if (!auth?.loading && auth?.isAuthenticated && auth?.role) {
+    if (auth?.loading === false && auth?.isAuthenticated && auth?.profile?.role) {
+      const targetRole = auth.profile.role;
       // For teens, go to survey (they haven't completed it yet), otherwise go to dashboard
-      if (auth.role === 'teen') {
+      if (targetRole === 'teen') {
         navigate('/teen/survey', { replace: true });
       } else {
-        navigate(`/${auth.role}`, { replace: true });
+        navigate(`/${targetRole}`, { replace: true });
       }
     }
-  }, [auth?.loading, auth?.isAuthenticated, auth?.role, navigate]);
+  }, [auth?.loading, auth?.isAuthenticated, auth?.profile?.role, navigate]);
 
   async function handleSubmit(event) {
     event.preventDefault();

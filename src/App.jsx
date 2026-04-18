@@ -45,6 +45,14 @@ function RequireAuth({ children }) {
 function RequireRole({ role, children }) {
   const auth = useAuth();
 
+  if (auth?.loading) {
+    return (
+      <AppShell>
+        <PageState title="Loading" description="Syncing your account." />
+      </AppShell>
+    );
+  }
+
   if (auth?.role && auth.role !== role) {
     return <Navigate to={`/${auth.role}`} replace />;
   }
@@ -54,6 +62,14 @@ function RequireRole({ role, children }) {
 
 function RequireSurveyComplete({ children }) {
   const auth = useAuth();
+
+  if (auth?.loading) {
+    return (
+      <AppShell>
+        <PageState title="Loading" description="Syncing your account." />
+      </AppShell>
+    );
+  }
 
   if (auth?.role === 'teen' && !auth?.profile?.surveyCompleted) {
     return <Navigate to="/teen/survey" replace />;
