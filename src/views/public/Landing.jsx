@@ -103,11 +103,11 @@ export default function Landing() {
             <img
               src="/churro-logo.png"
               alt="Churro"
-              className="h-9 w-auto"
+              className="h-16 w-auto"
               onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
             />
             <div className="hidden items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white font-heading font-bold text-xl">C</div>
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white font-heading font-bold text-xl">C</div>
               <span className="font-heading text-xl font-extrabold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">Churro</span>
             </div>
           </Link>
