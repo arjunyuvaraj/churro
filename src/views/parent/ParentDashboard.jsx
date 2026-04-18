@@ -5,6 +5,7 @@ import { doc, runTransaction } from 'firebase/firestore';
 import AppShell from '../../components/AppShell';
 import PageState from '../../components/PageState';
 import StatusBadge from '../../components/StatusBadge';
+import { SkeletonCard, SkeletonFeed } from '../../components/Skeleton';
 import { db } from '../../lib/firebase';
 import { parentDecision, useNotifications, useTasksForFeed, useCompletedTasksByTeen } from '../../lib/useTask';
 import { useAuth } from '../../lib/useAuth';
@@ -22,22 +23,20 @@ export default function ParentDashboard() {
 
   // Earnings chart data
   const chartData = useMemo(() => {
-    const weekly = auth?.profile?.linkedTeenUid && tasks.length > 0
-      ? tasks
-          .filter((t) => t.applicantTeenUid === auth.profile.linkedTeenUid && t.status === 'completed')
-          .reduce((acc, task) => {
-            const week = task.completedAt?.toDate?.() ? new Date(task.completedAt.toDate()).toISOString().split('T')[0] : 'Unknown';
-            const found = acc.find((e) => e.week === week);
-            if (found) {
-              found.value += task.pay;
-            } else {
-              acc.push({ week, value: task.pay });
-            }
-            return acc;
-          }, [])
-      : [];
-    return chartData.slice(-8); // Last 8 weeks
-  }, [auth?.profile?.linkedTeenUid, tasks]);
+    if (!auth?.profile?.linkedTeenUid || !completedTasks?.length) return [];
+    return completedTasks
+      .reduce((acc, task) => {
+        const date = task.completedAt?.toDate?.() ? new Date(task.completedAt.toDate()).toISOString().split('T')[0] : task.date || 'Unknown';
+        const found = acc.find((e) => e.week === date);
+        if (found) {
+          found.value += task.pay;
+        } else {
+          acc.push({ week: date, value: task.pay });
+        }
+        return acc;
+      }, [])
+      .slice(-8);
+  }, [auth?.profile?.linkedTeenUid, completedTasks]);
 
   // Check-in status steps
   const checkInSteps = ['none', 'on_the_way', 'arrived', 'done'];
@@ -69,22 +68,22 @@ export default function ParentDashboard() {
   }
 
   if (loading) {
-    return <AppShell><PageState title="Loading dashboard" description="Syncing teen activity and approvals." /></AppShell>;
+    return <AppShell><SkeletonFeed count={2} /></AppShell>;
   }
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <section className="rounded-2xl border border-border bg-white p-6">
+      <div className="space-y-6 animate-fade-in">
+        <section className="rounded-2xl border border-border bg-card p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-dark">Parent dashboard</p>
-          <h1 className="mt-2 font-heading text-3xl font-extrabold">{auth?.profile?.linkedTeenUid ? 'Teen status' : 'Link a teen account'}</h1>
+          <h1 className="mt-2 font-heading text-3xl font-extrabold text-text-primary">{auth?.profile?.linkedTeenUid ? 'Teen status' : 'Link a teen account'}</h1>
           <p className="mt-2 text-text-secondary">Live status updates refresh as the teen changes check-in states.</p>
           {!auth?.profile?.linkedTeenUid ? (
-            <div className="mt-4 rounded-xl border border-border p-4">
-              <p className="text-sm font-semibold">Paste teen account ID to link</p>
+            <div className="mt-4 rounded-xl border border-border bg-surface p-4">
+              <p className="text-sm font-semibold text-text-primary">Paste teen account ID to link</p>
               <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                <input value={teenUidInput} onChange={(event) => setTeenUidInput(event.target.value)} className="flex-1 rounded-xl border border-border px-4 py-3" placeholder="Teen UID" />
-                <button type="button" onClick={linkTeen} disabled={linking} className="rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white">
+                <input value={teenUidInput} onChange={(event) => setTeenUidInput(event.target.value)} className="flex-1 rounded-xl border border-border bg-card px-4 py-3 text-text-primary outline-none focus:border-primary transition" placeholder="Teen UID" />
+                <button type="button" onClick={linkTeen} disabled={linking} className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-dark transition disabled:opacity-50">
                   {linking ? 'Linking...' : 'Link teen'}
                 </button>
               </div>
@@ -94,21 +93,17 @@ export default function ParentDashboard() {
             <div className="mt-4 rounded-xl bg-surface p-4">
               <div className="mb-4 flex items-center justify-between gap-4">
                 <div>
-                  <p className="font-semibold">{activeTask.teenName} is on {activeTask.title}</p>
+                  <p className="font-semibold text-text-primary">{activeTask.teenName} is on {activeTask.title}</p>
                   <p className="text-sm text-text-secondary">Current step: {activeTask.teenCheckInStatus?.replaceAll('_', ' ')}</p>
                 </div>
                 <StatusBadge status={activeTask.status} />
               </div>
-              {/* Check-in progress bar */}
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-text-secondary">Task progress</p>
-                <div className="h-2 w-full rounded-full bg-border">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${checkInProgress}%` }}
-                  />
+                <div className="h-2.5 w-full rounded-full bg-border overflow-hidden">
+                  <div className="h-full rounded-full bg-gradient-to-r from-primary to-amber-500 transition-all duration-500" style={{ width: `${checkInProgress}%` }} />
                 </div>
-                <div className="flex justify-between text-xs text-text-secondary">
+                <div className="flex justify-between text-[10px] text-text-secondary">
                   <span>Not started</span>
                   <span>On the way</span>
                   <span>Arrived</span>
@@ -118,7 +113,7 @@ export default function ParentDashboard() {
             </div>
           ) : auth?.profile?.linkedTeenUid ? (
             <div className="mt-4 rounded-xl bg-surface p-4">
-              <p className="font-semibold">{auth?.profile?.fullName?.split(/\s+/)[0]} is not currently on a task.</p>
+              <p className="font-semibold text-text-primary">Your teen is not currently on a task.</p>
             </div>
           ) : null}
         </section>
@@ -126,15 +121,15 @@ export default function ParentDashboard() {
         {/* Earnings widget */}
         {auth?.profile?.linkedTeenUid && (
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-white p-5">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <p className="text-sm text-text-secondary">Current balance</p>
-              <p className="mt-2 font-mono text-3xl font-bold text-text-primary">${auth?.profile?.linkedTeenUid && tasks.length > 0 ? (tasks.find((t) => t.applicantTeenUid === auth.profile.linkedTeenUid && t.status === 'completed') ? 'See below' : '0') : '0'}</p>
+              <p className="mt-2 font-mono text-3xl font-bold text-text-primary">${completedTasks?.reduce((sum, task) => sum + (task.pay || 0), 0) || 0}</p>
             </div>
-            <div className="rounded-2xl border border-border bg-white p-5">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <p className="text-sm text-text-secondary">Lifetime earned</p>
               <p className="mt-2 font-mono text-3xl font-bold text-success">${completedTasks?.reduce((sum, task) => sum + (task.pay || 0), 0) || 0}</p>
             </div>
-            <div className="rounded-2xl border border-border bg-white p-5">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <p className="text-sm text-text-secondary">Tasks completed</p>
               <p className="mt-2 font-mono text-3xl font-bold text-text-primary">{completedTasks?.length || 0}</p>
             </div>
@@ -142,15 +137,15 @@ export default function ParentDashboard() {
         )}
 
         {/* Weekly earnings chart */}
-        {auth?.profile?.linkedTeenUid && completedTasks && completedTasks.length > 0 && (
-          <div className="rounded-2xl border border-border bg-white p-6">
-            <h2 className="font-heading text-xl font-bold">Earnings over time</h2>
+        {auth?.profile?.linkedTeenUid && chartData.length > 0 && (
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="font-heading text-xl font-bold text-text-primary">Earnings over time</h2>
             <div className="mt-4 h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
-                  <XAxis dataKey="week" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} />
-                  <Tooltip />
+                  <XAxis dataKey="week" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                  <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '12px' }} />
                   <Bar dataKey="value" fill="#22c55e" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -160,18 +155,18 @@ export default function ParentDashboard() {
 
         {/* Completed tasks */}
         {auth?.profile?.linkedTeenUid && (
-          <section className="rounded-2xl border border-border bg-white p-6">
-            <h2 className="font-heading text-xl font-bold">Completed tasks</h2>
+          <section className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="font-heading text-xl font-bold text-text-primary">Completed tasks</h2>
             <div className="mt-4 space-y-3">
               {completedTasks && completedTasks.length > 0 ? completedTasks.slice(0, 5).map((task) => (
                 <Link
                   key={task.id}
                   to={`/parent/task/${task.id}`}
-                  className="block rounded-xl border border-border p-4 transition hover:border-primary hover:bg-primary-light"
+                  className="block rounded-xl border border-border bg-surface p-4 transition hover:border-primary card-hover"
                 >
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="font-semibold">{task.title}</p>
+                      <p className="font-semibold text-text-primary">{task.title}</p>
                       <p className="text-sm text-text-secondary">{task.neighborName} · ${task.pay} · {task.date}</p>
                     </div>
                     <div className="text-sm font-semibold text-success">Completed</div>
@@ -182,34 +177,38 @@ export default function ParentDashboard() {
           </section>
         )}
 
-        <section className="rounded-2xl border border-border bg-white p-6">
-          <h2 className="font-heading text-xl font-bold">Pending approvals</h2>
+        {/* Pending approvals */}
+        <section className="rounded-2xl border border-border bg-card p-6">
+          <h2 className="font-heading text-xl font-bold text-text-primary">Pending approvals</h2>
           <div className="mt-4 space-y-3">
             {pendingTasks.length ? pendingTasks.map((task) => (
-              <div key={task.id} className="rounded-xl border border-border p-4">
+              <div key={task.id} className="rounded-xl border border-border bg-surface p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-semibold">{task.title}</p>
-                    <p className="text-sm text-text-secondary">{task.neighborName} · {task.neighborAddress} · ${task.pay} · {task.startTime} - {task.endTime}</p>
+                    <p className="font-semibold text-text-primary">{task.title}</p>
+                    <p className="text-sm text-text-secondary">{task.neighborName} · {task.neighborAddress} · ${task.pay} · {task.startTime} – {task.endTime}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => handleDecision(task, true)} className="rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white">Approve</button>
-                    <button type="button" onClick={() => handleDecision(task, false)} className="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white">Decline</button>
+                    <button type="button" onClick={() => handleDecision(task, true)} className="rounded-xl bg-success px-5 py-2.5 text-sm font-semibold text-white hover:bg-success/90 transition">Approve</button>
+                    <button type="button" onClick={() => handleDecision(task, false)} className="rounded-xl bg-danger px-5 py-2.5 text-sm font-semibold text-white hover:bg-danger/90 transition">Decline</button>
                   </div>
                 </div>
               </div>
             )) : <PageState title="No pending approvals" description="New applications will appear here." />}
           </div>
         </section>
-        <section className="rounded-2xl border border-border bg-white p-6">
-          <h2 className="font-heading text-xl font-bold">Recent activity</h2>
+
+        {/* Recent activity */}
+        <section className="rounded-2xl border border-border bg-card p-6">
+          <h2 className="font-heading text-xl font-bold text-text-primary">Recent activity</h2>
           <div className="mt-4 space-y-3">
             {notifications.data.slice(0, 10).map((notification) => (
-              <div key={notification.id} className="rounded-xl border border-border px-4 py-3 text-sm">
-                <p className="font-semibold">{notification.type.replaceAll('_', ' ')}</p>
+              <div key={notification.id} className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+                <p className="font-semibold text-text-primary capitalize">{notification.type.replaceAll('_', ' ')}</p>
                 <p className="text-text-secondary">{notification.message}</p>
               </div>
             ))}
+            {notifications.data.length === 0 && <p className="text-sm text-text-secondary">No recent activity.</p>}
           </div>
         </section>
       </div>

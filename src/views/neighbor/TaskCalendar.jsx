@@ -63,21 +63,23 @@ export default function TaskCalendar({ tasks = [], onDateSelect = () => {} }) {
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="rounded-2xl border border-border bg-white p-6">
+    <div className="rounded-2xl border border-border bg-card p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="font-heading text-xl font-bold">{monthName}</h2>
+        <h2 className="font-heading text-xl font-bold text-text-primary">{monthName}</h2>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={goToPreviousMonth}
-            className="rounded-lg border border-border p-2 hover:bg-surface"
+            className="rounded-lg border border-border bg-card p-2 hover:bg-surface transition"
+            aria-label="Previous month"
           >
             <ChevronLeft size={20} />
           </button>
           <button
             type="button"
             onClick={goToNextMonth}
-            className="rounded-lg border border-border p-2 hover:bg-surface"
+            className="rounded-lg border border-border bg-card p-2 hover:bg-surface transition"
+            aria-label="Next month"
           >
             <ChevronRight size={20} />
           </button>
@@ -108,7 +110,7 @@ export default function TaskCalendar({ tasks = [], onDateSelect = () => {} }) {
               onClick={() => handleDateClick(dayObj.fullDate)}
               className={`relative rounded-lg p-3 text-center transition aspect-square flex flex-col items-center justify-center text-sm font-medium ${
                 isCurrentMonth
-                  ? 'border border-border bg-white hover:border-primary cursor-pointer'
+                  ? 'border border-border bg-card hover:border-primary cursor-pointer text-text-primary'
                   : 'text-text-secondary bg-surface'
               } ${isToday ? 'ring-2 ring-primary' : ''}`}
             >
