@@ -9,9 +9,8 @@ export default function TopNav() {
     <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white font-heading text-lg font-bold">C</div>
+          <img src="/images/churro-logo.png" alt="Churro" className="h-16 w-auto transform group-hover:scale-110 transition-transform duration-300 rounded-2xl" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           <div>
-            <div className="font-heading text-lg font-bold">Churro</div>
             <div className="text-xs text-text-secondary">Neighborhood task marketplace</div>
           </div>
         </Link>
