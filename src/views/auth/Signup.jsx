@@ -28,13 +28,16 @@ export default function Signup() {
 
   useEffect(() => {
     if (!auth?.loading && auth?.isAuthenticated && auth?.role) {
-      if (auth.role === 'teen') {
+      const from = location.state?.from?.pathname;
+      if (from && from !== '/signup') {
+        navigate(from, { replace: true });
+      } else if (auth.role === 'teen') {
         navigate('/teen/survey', { replace: true });
       } else {
         navigate(`/${auth.role}`, { replace: true });
       }
     }
-  }, [auth?.loading, auth?.isAuthenticated, auth?.role, navigate]);
+  }, [auth?.loading, auth?.isAuthenticated, auth?.role, navigate, location]);
 
   async function handleSubmit(event) {
     event.preventDefault();

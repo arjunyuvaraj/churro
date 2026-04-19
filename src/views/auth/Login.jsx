@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PageState from '../../components/PageState';
 import { useAuth } from '../../lib/useAuth';
 
@@ -13,25 +13,18 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const location = useLocation();
+
   // Auto-redirect once profile is loaded after login
   useEffect(() => {
     if (!auth?.loading && auth?.isAuthenticated && auth?.role) {
       if (auth.role === 'teen') {
-        navigate(
-          auth.profile?.surveyCompleted ? '/teen' : '/teen/survey',
-          { replace: true }
-        );
+        navigate(auth.profile?.surveyCompleted ? '/teen' : '/teen/survey', { replace: true });
       } else {
         navigate(`/${auth.role}`, { replace: true });
       }
     }
-  }, [
-    auth?.loading,
-    auth?.isAuthenticated,
-    auth?.role,
-    auth?.profile?.surveyCompleted,
-    navigate,
-  ]);
+  }, [auth?.loading, auth?.isAuthenticated, auth?.role, auth?.profile?.surveyCompleted, navigate]);
 
   async function handleSubmit(event) {
     event.preventDefault();

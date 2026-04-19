@@ -17,7 +17,7 @@ export default function Earnings() {
   const completedTasks = tasks.filter((task) => task.applicantTeenUid === auth?.currentUser?.uid && task.status === 'completed');
 
   if (loading) {
-    return <AppShell><PageState title="Loading earnings" description="Fetching your payout history." /></AppShell>;
+    return <AppShell><PageState title="Loading rewards" description="Fetching your rewards history." /></AppShell>;
   }
 
   return (
@@ -25,14 +25,14 @@ export default function Earnings() {
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-border bg-white p-5 md:col-span-1">
-            <p className="text-sm text-text-secondary">Total balance</p>
-            <p className="mt-2 font-mono text-4xl font-bold text-text-primary">${auth?.profile?.balance ?? 0}</p>
-            <button type="button" onClick={() => window.alert('Request payout submitted.')} className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white">
-              Request payout
+            <p className="text-sm text-text-secondary">Total rewards</p>
+            <p className="mt-2 font-mono text-4xl font-bold text-text-primary">{auth?.profile?.balance ?? 0}</p>
+            <button type="button" onClick={() => window.alert('Request rewards submitted.')} className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white">
+              Request rewards
             </button>
           </div>
           <div className="rounded-2xl border border-border bg-white p-5 md:col-span-2">
-            <h1 className="font-heading text-2xl font-bold">Earnings by week</h1>
+            <h1 className="font-heading text-2xl font-bold">Rewards by week</h1>
             <div className="mt-4 h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
@@ -54,9 +54,9 @@ export default function Earnings() {
                   <p className="font-semibold">{task.title}</p>
                   <p className="text-sm text-text-secondary">{task.completedAt ? new Date(task.completedAt.seconds ? task.completedAt.seconds * 1000 : task.completedAt).toLocaleDateString() : 'Completed'}</p>
                 </div>
-                <p className="font-mono font-semibold">${task.pay}</p>
+                <p className="font-mono font-semibold">Reward: {task.pay}</p>
               </div>
-            )) : <PageState title="No completed tasks yet" description="Your completed work and payouts will appear here." />}
+            )) : <PageState title="No completed tasks yet" description="Your completed work and rewards will appear here." />}
           </div>
         </div>
       </div>

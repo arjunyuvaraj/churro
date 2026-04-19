@@ -214,8 +214,6 @@ export async function confirmCompletion({ task, teenUid, neighborUid }) {
     const teenRef = doc(db, 'users', teenUid);
     const neighborRef = doc(db, 'users', neighborUid);
     transaction.update(teenRef, {
-      balance: increment(task.pay),
-      totalEarned: increment(task.pay),
       completedTasks: increment(1)
     });
     transaction.update(neighborRef, {

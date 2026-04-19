@@ -28,10 +28,23 @@ export default function PostTask() {
 
   async function handlePost() {
     setSaving(true);
+    let coords = { lat: 37.7749, lng: -122.4194 };
+    
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        });
+        coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      } catch (err) {
+        console.warn('Geolocation failed, using default', err);
+      }
+    }
+
     await createTask({
       taskId: crypto.randomUUID(),
       neighborUid: auth.currentUser.uid,
-      neighborName: auth.profile.fullName.split(/\s+/)[0],
+      neighborName: auth.firstName || 'Neighbor',
       neighborAddress: auth.profile.address,
       neighborRating: auth.profile.averageRating || 4,
       category,
@@ -39,12 +52,12 @@ export default function PostTask() {
       title,
       description,
       specialInstructions,
-      pay: Number(pay),
+      pay: String(pay).trim(),
       date,
       startTime,
       endTime,
-      latitude: 37.7749,
-      longitude: -122.4194
+      latitude: coords.lat,
+      longitude: coords.lng
     });
     setSaving(false);
     navigate('/neighbor');
@@ -84,7 +97,7 @@ export default function PostTask() {
               <h2 className="font-heading text-xl font-bold">Step 2. Details</h2>
               <label className="block"><span className="mb-1 block text-sm font-semibold">Title</span><input className="w-full rounded-xl border border-border px-4 py-3" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
               <label className="block"><span className="mb-1 block text-sm font-semibold">Description</span><textarea className="w-full rounded-xl border border-border px-4 py-3" rows="4" value={description} onChange={(event) => setDescription(event.target.value)} /></label>
-              <label className="block"><span className="mb-1 block text-sm font-semibold">Pay amount</span><input className="w-full rounded-xl border border-border px-4 py-3" type="number" inputMode="decimal" value={pay} onChange={(event) => setPay(event.target.value)} /></label>
+              <label className="block"><span className="mb-1 block text-sm font-semibold">Reward (Cash or Hours)</span><input className="w-full rounded-xl border border-border px-4 py-3 transition-colors focus:border-primary focus:ring-4 focus:ring-primary/10" type="text" value={pay} onChange={(event) => setPay(event.target.value)} placeholder="e.g., $15 or 1 hour volunteer" /></label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block"><span className="mb-1 block text-sm font-semibold">Date</span><input className="w-full rounded-xl border border-border px-4 py-3" type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
                 <label className="block"><span className="mb-1 block text-sm font-semibold">Start time</span><input className="w-full rounded-xl border border-border px-4 py-3" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
@@ -100,7 +113,7 @@ export default function PostTask() {
               <div className="rounded-xl bg-surface p-4 text-sm">
                 <p><span className="font-semibold">Category:</span> {selectedCategory?.label}</p>
                 <p><span className="font-semibold">Title:</span> {title}</p>
-                <p><span className="font-semibold">Pay:</span> ${pay}</p>
+                <p><span className="font-semibold">Reward:</span> {pay}</p>
                 <p><span className="font-semibold">Time:</span> {date} {startTime} - {endTime}</p>
               </div>
               <div className="flex gap-3"><button type="button" onClick={() => setStep(2)} className="rounded-lg border border-primary px-4 py-3 text-sm font-semibold text-primary-dark">Back</button><button type="button" disabled={saving} onClick={handlePost} className="rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white">{saving ? 'Posting...' : 'Post Task'}</button></div>

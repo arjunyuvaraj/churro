@@ -43,8 +43,8 @@ export default function TaskDetailReadOnly() {
             <div className="flex items-center gap-2 rounded-xl bg-surface p-3">
               <Wallet size={16} className="text-primary shrink-0" />
               <div>
-                <p className="text-xs text-text-secondary">Pay</p>
-                <p className="font-mono font-bold text-text-primary">${task.pay}</p>
+                <p className="text-xs text-text-secondary">Reward</p>
+                <p className="font-mono font-bold text-text-primary">{task.pay}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-xl bg-surface p-3">

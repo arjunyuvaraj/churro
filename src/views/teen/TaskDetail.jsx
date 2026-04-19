@@ -42,7 +42,7 @@ export default function TaskDetail() {
           <h1 className="mt-2 font-heading text-3xl font-extrabold">{task.title}</h1>
           <p className="mt-3 text-text-secondary">{task.description}</p>
           <div className="mt-5 grid gap-3 sm:grid-cols-3 text-sm">
-            <div className="rounded-xl bg-surface p-4"><div className="text-text-secondary">Pay</div><div className="font-semibold">${task.pay}</div></div>
+            <div className="rounded-xl bg-surface p-4"><div className="text-text-secondary">Reward</div><div className="font-semibold">{task.pay}</div></div>
             <div className="rounded-xl bg-surface p-4"><div className="text-text-secondary">Time window</div><div className="font-semibold">{task.startTime} - {task.endTime}</div></div>
             <div className="rounded-xl bg-surface p-4"><div className="text-text-secondary">Neighbor</div><div className="font-semibold">{task.neighborName}</div></div>
           </div>
