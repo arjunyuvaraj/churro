@@ -74,8 +74,8 @@ service cloud.firestore {
       allow create: if isNeighbor() && request.resource.data.neighborUid == request.auth.uid;
 
       allow update: if isSignedIn() && (
-        (isTeen() && resource.data.status == 'open' && resource.data.applicantTeenUid == null && request.resource.data.applicantTeenUid == request.auth.uid && request.resource.data.status == 'pending_parent_approval' && request.resource.data.diff(resource.data).changedKeys().hasOnly(['applicantTeenUid', 'status', 'teenName', 'teenCheckInStatus'])) ||
-        (isTeen() && resource.data.applicantTeenUid == request.auth.uid && (resource.data.status == 'active' || resource.data.status == 'in_progress' || resource.data.status == 'pending_confirmation') && request.resource.data.teenCheckInStatus in ['on_the_way', 'arrived', 'done'] && request.resource.data.diff(resource.data).changedKeys().hasOnly(['teenCheckInStatus', 'status'])) ||
+        (isTeen() && resource.data.status == 'open' && resource.data.applicantTeenUid == null && request.resource.data.applicantTeenUid == request.auth.uid && request.resource.data.status == 'pending_parent_approval' && request.resource.data.diff(resource.data).changedKeys().hasOnly(['applicantTeenUid', 'status', 'teenName', 'teenCheckInStatus', 'updatedAt'])) ||
+        (isTeen() && resource.data.applicantTeenUid == request.auth.uid && (resource.data.status == 'active' || resource.data.status == 'in_progress' || resource.data.status == 'pending_confirmation') && request.resource.data.teenCheckInStatus in ['on_the_way', 'arrived', 'done'] && request.resource.data.diff(resource.data).changedKeys().hasOnly(['teenCheckInStatus', 'status', 'updatedAt'])) ||
         (isParent() && resource.data.applicantTeenUid == userDoc().data.linkedTeenUid) ||
         (isNeighbor() && resource.data.neighborUid == request.auth.uid)
       );

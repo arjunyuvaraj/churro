@@ -51,10 +51,16 @@ export default function TaskDetail() {
             <div className="mt-2"><RatingStars value={Math.round(task.neighborRating)} size="sm" /></div>
           </div>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button type="button" onClick={handleApply} className="flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white">
-              Apply
-            </button>
-            <button type="button" onClick={() => navigate('/teen')} className="flex min-h-11 items-center justify-center rounded-lg border border-primary bg-white px-4 py-3 text-sm font-semibold text-primary-dark">
+            {task.applicantTeenUid === auth?.currentUser?.uid ? (
+              <button disabled className="flex min-h-11 items-center justify-center rounded-lg bg-slate-200 px-4 py-3 text-sm font-semibold text-slate-500 cursor-not-allowed">
+                {task.status === 'pending_parent_approval' ? 'Pending Approval' : 'Already Applied'}
+              </button>
+            ) : (
+              <button type="button" onClick={handleApply} className="flex min-h-11 items-center justify-center rounded-lg bg-slate-200 px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-300">
+                Apply
+              </button>
+            )}
+            <button type="button" onClick={() => navigate('/teen')} className="flex min-h-11 items-center justify-center rounded-lg border border-border bg-white px-4 py-3 text-sm font-semibold text-text-primary">
               Back to browse
             </button>
           </div>
