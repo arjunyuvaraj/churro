@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PageState from '../../components/PageState';
 import { useAuth } from '../../lib/useAuth';
 
 export default function Login() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const inviteToken = new URLSearchParams(location.search).get('inviteToken');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,16 +17,24 @@ export default function Login() {
 
   useEffect(() => {
     if (!auth?.loading && auth?.isAuthenticated && auth?.role) {
+      if (inviteToken && auth.role === 'parent') {
+        navigate(`/accept-parent-invite?token=${encodeURIComponent(inviteToken)}`, { replace: true });
+        return;
+      }
       if (auth.role === 'teen') {
         navigate(auth.profile?.surveyCompleted ? '/teen' : '/teen/survey', { replace: true });
       } else {
         navigate(`/${auth.role}`, { replace: true });
       }
     }
-  }, [auth?.loading, auth?.isAuthenticated, auth?.role, auth?.profile?.surveyCompleted, navigate]);
+  }, [auth?.loading, auth?.isAuthenticated, auth?.role, auth?.profile?.surveyCompleted, navigate, inviteToken]);
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setError('Missing required fields: email, password');
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -83,7 +93,7 @@ export default function Login() {
           <div className="mb-8">
             <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Welcome Back</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Don’t have an account? <Link to="/signup" className="font-semibold text-slate-900 underline decoration-orange-200 underline-offset-4 transition hover:decoration-orange-700">Sign up</Link>
+              Don’t have an account? <Link to={inviteToken ? `/signup?role=parent&inviteToken=${encodeURIComponent(inviteToken)}` : '/signup'} className="font-semibold text-slate-900 underline decoration-orange-200 underline-offset-4 transition hover:decoration-orange-700">Sign up</Link>
             </p>
           </div>
 
@@ -184,6 +194,9 @@ function getReadableAuthError(error) {
   }
   if (message.includes('auth/popup-closed-by-user')) {
     return 'Sign-in popup was closed. Please try again.';
+  }
+  if (message.includes('Missing required fields:')) {
+    return message;
   }
   return message || 'Unable to sign in.';
 }

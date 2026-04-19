@@ -11,6 +11,7 @@ export default function Signup() {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const inviteToken = new URLSearchParams(location.search).get('inviteToken');
   const initialRole = location.state?.accountType || useRoleFromQuery();
   const initialGoogleSignup = Boolean(location.state?.fromGoogle || new URLSearchParams(location.search).get('fromGoogle') === '1');
 
@@ -50,6 +51,10 @@ export default function Signup() {
 
   useEffect(() => {
     if (!auth?.loading && auth?.isAuthenticated && auth?.role) {
+      if (inviteToken && auth.role === 'parent') {
+        navigate(`/accept-parent-invite?token=${encodeURIComponent(inviteToken)}`, { replace: true });
+        return;
+      }
       const from = location.state?.from?.pathname;
       if (from && from !== '/signup') {
         navigate(from, { replace: true });
@@ -59,12 +64,44 @@ export default function Signup() {
         navigate(`/${auth.role}`, { replace: true });
       }
     }
-  }, [auth?.loading, auth?.isAuthenticated, auth?.role, navigate, location]);
+  }, [auth?.loading, auth?.isAuthenticated, auth?.role, navigate, location, inviteToken]);
+
+  function validateRequiredFields() {
+    const missing = [];
+    if (!role) missing.push('account type');
+
+    if (!isGoogleSignup) {
+      if (!fullName.trim()) missing.push('full name');
+      if (!email.trim()) missing.push('email');
+      if (!password.trim()) missing.push('password');
+    }
+
+    if (role === 'teen') {
+      if (!dateOfBirth.trim()) missing.push('date of birth');
+      if (!parentEmail.trim()) missing.push('parent email');
+    }
+
+    if (role === 'neighbor' && !address.trim()) {
+      missing.push('home address');
+    }
+
+    if (missing.length) {
+      return `Missing required fields: ${missing.join(', ')}`;
+    }
+
+    return null;
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
     if (isAccountTypeStep) {
       setStep('details');
+      return;
+    }
+
+    const missingError = validateRequiredFields();
+    if (missingError) {
+      setError(missingError);
       return;
     }
 
@@ -256,10 +293,16 @@ export default function Signup() {
 
               <p className="text-center text-sm text-slate-500">
                 Already have an account?{' '}
-                <Link to="/login" className="font-semibold text-slate-900 underline decoration-orange-200 underline-offset-4 transition hover:decoration-orange-700">
+                <Link to={inviteToken ? `/login?inviteToken=${encodeURIComponent(inviteToken)}` : '/login'} className="font-semibold text-slate-900 underline decoration-orange-200 underline-offset-4 transition hover:decoration-orange-700">
                   Log in
                 </Link>
               </p>
+
+              {inviteToken ? (
+                <p className="text-center text-xs text-slate-500">
+                  Parent invite detected. Use a parent account to accept it after sign in.
+                </p>
+              ) : null}
             </div>
           )}
         </div>
@@ -281,6 +324,9 @@ function getReadableAuthError(error) {
   }
   if (message.includes('auth/email-already-in-use')) {
     return 'An account with this email already exists. Try logging in instead.';
+  }
+  if (message.includes('Missing required fields:')) {
+    return message;
   }
   return message || 'Unable to create account.';
 }

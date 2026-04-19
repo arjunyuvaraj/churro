@@ -7,6 +7,7 @@ import { firebaseReady } from './lib/firebase';
 import { seedDemoData } from './lib/seedDemoData';
 import Login from './views/auth/Login';
 import Signup from './views/auth/Signup';
+import AcceptParentInvite from './views/auth/AcceptParentInvite';
 import Landing from './views/public/Landing';
 import Privacy from './views/public/Privacy';
 import Terms from './views/public/Terms';
@@ -17,6 +18,7 @@ import ActiveTask from './views/teen/ActiveTask';
 import Earnings from './views/teen/Earnings';
 import TeenProfile from './views/teen/TeenProfile';
 import ParentDashboard from './views/parent/ParentDashboard';
+import ParentNotifications from './views/parent/ParentNotifications';
 import ParentSettings from './views/parent/ParentSettings';
 import TaskDetailReadOnly from './views/parent/TaskDetailReadOnly';
 import NeighborDashboard from './views/neighbor/NeighborDashboard';
@@ -39,6 +41,27 @@ function RequireAuth({ children }) {
 
   if (!auth?.isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return children;
+}
+
+function RedirectIfAuthenticated({ children }) {
+  const auth = useAuth();
+
+  if (auth?.loading) {
+    return (
+      <AppShell>
+        <PageState title="Loading" description="Syncing your account." />
+      </AppShell>
+    );
+  }
+
+  if (auth?.isAuthenticated && auth?.role) {
+    if (auth.role === 'teen' && !auth?.profile?.surveyCompleted) {
+      return <Navigate to="/teen/survey" replace />;
+    }
+    return <Navigate to={`/${auth.role}`} replace />;
   }
 
   return children;
@@ -96,9 +119,24 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+      <Route
+        path="/login"
+        element={
+          <RedirectIfAuthenticated>
+            <Login />
+          </RedirectIfAuthenticated>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <RedirectIfAuthenticated>
+            <Signup />
+          </RedirectIfAuthenticated>
+        }
+      />
       <Route path="/signup/role" element={<Navigate to="/signup" replace />} />
+      <Route path="/accept-parent-invite" element={<AcceptParentInvite />} />
       <Route
         path="/teen/survey"
         element={
@@ -197,6 +235,16 @@ export default function App() {
           <RequireAuth>
             <RequireRole role="parent">
               <ParentSettings />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/parent/notifications"
+        element={
+          <RequireAuth>
+            <RequireRole role="parent">
+              <ParentNotifications />
             </RequireRole>
           </RequireAuth>
         }

@@ -10,34 +10,36 @@ const items = {
   ],
   parent: [
     { to: '/parent', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/parent/notifications', label: 'Alerts', icon: Bell },
+    { to: '/parent/notifications', label: 'Notifications', icon: Bell },
     { to: '/parent/settings', label: 'Settings', icon: User }
   ],
   neighbor: [
     { to: '/neighbor', label: 'Dashboard', icon: Home },
-    { to: '/neighbor/post-task', label: 'Post', icon: BriefcaseBusiness }
+    { to: '/neighbor/post-task', label: 'Post Task', icon: BriefcaseBusiness }
   ]
 };
 
-export default function BottomNav({ role }) {
+export default function SideNav({ role }) {
   const visibleItems = items[role] || [];
 
+  if (!visibleItems.length) return null;
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 backdrop-blur md:hidden">
-      <div className="grid gap-1 px-2 py-2" style={{ gridTemplateColumns: `repeat(${visibleItems.length || 1}, minmax(0, 1fr))` }}>
+    <aside className="sticky top-24 h-fit rounded-2xl border border-border bg-white p-3">
+      <nav className="space-y-1">
         {visibleItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex min-h-11 flex-col items-center justify-center rounded-lg text-xs font-medium ${isActive ? 'text-primary' : 'text-text-secondary'}`
+              `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${isActive ? 'bg-primary-light text-primary-dark' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`
             }
           >
-            <Icon size={18} />
+            <Icon size={17} />
             <span>{label}</span>
           </NavLink>
         ))}
-      </div>
-    </nav>
+      </nav>
+    </aside>
   );
 }
