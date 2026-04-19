@@ -26,11 +26,19 @@ function useFirestoreCollection(path, constraints = [], enabled = true) {
       return undefined;
     }
 
+    setLoading(true);
     const ref = query(collection(db, path), ...constraints);
-    return onSnapshot(ref, (snapshot) => {
-      setData(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      setLoading(false);
-    });
+    return onSnapshot(
+      ref,
+      (snapshot) => {
+        setData(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Firestore subscription error:', err);
+        setLoading(false);
+      }
+    );
   }, [path, constraints, enabled]);
 
   return { data, loading };
@@ -79,10 +87,17 @@ export function useTaskById(taskId) {
     }
 
     const taskRef = doc(db, 'tasks', taskId);
-    return onSnapshot(taskRef, (snapshot) => {
-      setData(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
-      setLoading(false);
-    });
+    return onSnapshot(
+      taskRef,
+      (snapshot) => {
+        setData(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Firestore task fetch error:', err);
+        setLoading(false);
+      }
+    );
   }, [taskId]);
 
   return { data, loading };

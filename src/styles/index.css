@@ -65,6 +65,16 @@ a {
   to { opacity: 1; }
 }
 
+@keyframes pulse-bg {
+  0%, 100% { background-color: #E2E8F0; } /* Matches tailwind slate-200 */
+  50% { background-color: #F1F5F9; } /* Matches tailwind slate-100 */
+}
+
+.skeleton {
+  animation: pulse-bg 1.5s ease-in-out infinite;
+  background-color: #E2E8F0;
+}
+
 /* Micro-interaction globally for buttons and interactive cards */
 button, a, .card-hover {
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);

@@ -6,9 +6,9 @@ export default function AppShell({ children }) {
   const auth = useAuth();
 
   return (
-    <div className="min-h-screen bg-surface text-text-primary">
+    <div className="flex min-h-screen flex-col bg-surface text-text-primary">
       <TopNav />
-      <main className="mx-auto w-full max-w-7xl px-4 pb-28 pt-4 sm:px-6 lg:px-8 lg:pb-10">
+      <main className="mx-auto flex-1 w-full max-w-7xl px-4 pb-28 pt-4 sm:px-6 lg:px-8 lg:pb-10">
         {children}
       </main>
       {auth?.role ? <BottomNav role={auth.role} /> : null}
