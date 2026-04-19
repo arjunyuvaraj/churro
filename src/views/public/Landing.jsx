@@ -24,7 +24,7 @@ export default function Landing() {
           {/* Left side */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2 group hover:opacity-80 transition-opacity">
-              <img src="/churro-logo.png" alt="Churro" className="h-8 w-auto transform group-hover:scale-110 transition-transform duration-300" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+              <img src="/churro-logo.png" alt="Churro" className="h-16 w-auto transform group-hover:scale-110 transition-transform duration-300" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
               <span className="hidden font-heading text-2xl font-bold tracking-tight text-primary">Churro</span>
             </Link>
             
@@ -123,10 +123,10 @@ export default function Landing() {
             <div className="bg-primary px-8 py-16 lg:px-16 flex flex-col justify-center gap-8">
               {[
                 { num: '01', text: 'Neighbor Posts' },
-                { num: '02', text: 'Teen Browses & Applies' },
+                { num: '02', text: 'Teen Applies' },
                 { num: '03', text: 'Parent Approves' },
-                { num: '04', text: 'Task Happens Safely' },
-                { num: '05', text: 'Teens Earn' }
+                { num: '04', text: 'Teen Works' },
+                { num: '05', text: 'Teen Earns' }
               ].map((step) => (
                 <div key={step.num} className="flex items-baseline gap-6 group cursor-default">
                   <span className="font-heading text-6xl lg:text-7xl font-bold tracking-tighter text-white/30 transition-colors duration-300 group-hover:text-white">{step.num}</span>
@@ -137,8 +137,8 @@ export default function Landing() {
             
             {/* Right Image Panel */}
             <div className="bg-stone-300 relative overflow-hidden flex items-center justify-center min-h-[400px] border-l border-stone-200">
-              <div className="text-stone-900 font-heading text-4xl font-bold tracking-tighter">Example Image</div>
-              {/* Optional: Add a real image here covering the div */}
+              <div className="text-stone-900 font-heading text-4xl font-bold tracking-tighter"></div>
+                <img src="https://blog.nsslha.org/wp-content/uploads/2019/06/Paporto_Tutoring-1060x707.jpg"></img>
             </div>
           </div>
         </section>
