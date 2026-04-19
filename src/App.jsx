@@ -7,7 +7,6 @@ import { firebaseReady } from './lib/firebase';
 import { seedDemoData } from './lib/seedDemoData';
 import Login from './views/auth/Login';
 import Signup from './views/auth/Signup';
-import RoleSelect from './views/auth/RoleSelect';
 import Landing from './views/public/Landing';
 import Privacy from './views/public/Privacy';
 import Terms from './views/public/Terms';
@@ -99,7 +98,7 @@ export default function App() {
       <Route path="/terms" element={<Terms />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/signup/role" element={<RoleSelect />} />
+      <Route path="/signup/role" element={<Navigate to="/signup" replace />} />
       <Route
         path="/teen/survey"
         element={

@@ -149,6 +149,7 @@ export function AuthProvider({ children }) {
       updateTeenSkills,
       isAuthenticated: Boolean(currentUser),
       role: profile?.role || null,
+      accountType: profile?.accountType || profile?.role || null,
       firstName: profile?.fullName ? getFirstName(profile.fullName) : ''
     }),
     [currentUser, profile, loading]
@@ -167,6 +168,7 @@ function getBaseProfile(uid, email, fullName, role) {
     email,
     fullName: fullName || 'Volunteer',
     role,
+    accountType: role,
     createdAt: serverTimestamp(),
     profileComplete: true
   };

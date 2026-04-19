@@ -34,7 +34,7 @@ export default function Onboarding() {
   function next() {
     if (isLast) {
       localStorage.setItem('churro-onboarded', 'true');
-      navigate('/signup/role');
+      navigate('/signup');
     } else {
       setCurrent(current + 1);
     }
@@ -42,7 +42,7 @@ export default function Onboarding() {
 
   function skip() {
     localStorage.setItem('churro-onboarded', 'true');
-    navigate('/signup/role');
+    navigate('/signup');
   }
 
   return (

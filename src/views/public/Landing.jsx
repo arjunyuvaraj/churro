@@ -87,7 +87,7 @@ export default function Landing() {
             </Link>
             
             <nav className="hidden lg:flex items-center gap-6">
-              <Link to="/signup/role" className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-primary-dark hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-primary/30">
+              <Link to="/signup" className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-primary-dark hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-primary/30">
                 Post A Task
               </Link>
 <a href="#features" className="text-sm font-medium text-stone-600 transition-colors hover:text-stone-900">Features</a>
@@ -96,7 +96,7 @@ export default function Landing() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link to="/signup/role" className="hidden sm:flex rounded-full bg-black px-6 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-stone-800 hover:scale-105 active:scale-95">
+            <Link to="/signup" className="hidden sm:flex rounded-full bg-black px-6 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-stone-800 hover:scale-105 active:scale-95">
               Apply Now
             </Link>
             <Link to="/login" className="rounded-full border border-stone-300 px-6 py-2.5 text-sm font-medium text-stone-900 transition-all duration-300 hover:bg-stone-100 hover:scale-105 active:scale-95 bg-white">
@@ -249,10 +249,10 @@ export default function Landing() {
               Ready to get started?
             </h2>
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link to="/signup/role" className="flex items-center justify-center gap-3 rounded-2xl bg-primary px-8 py-6 text-white font-heading text-xl font-bold hover:bg-primary-dark transition-all hover:scale-105">
+              <Link to="/signup" className="flex items-center justify-center gap-3 rounded-2xl bg-primary px-8 py-6 text-white font-heading text-xl font-bold hover:bg-primary-dark transition-all hover:scale-105">
                 Post your first task <ChevronRight size={24} />
               </Link>
-              <Link to="/signup/role" className="flex items-center justify-center gap-3 rounded-2xl border-2 border-primary px-8 py-6 text-primary font-heading text-xl font-bold hover:bg-primary/5 transition-all hover:scale-105">
+              <Link to="/signup" className="flex items-center justify-center gap-3 rounded-2xl border-2 border-primary px-8 py-6 text-primary font-heading text-xl font-bold hover:bg-primary/5 transition-all hover:scale-105">
                 Browse tasks near you <ChevronRight size={24} />
               </Link>
             </div>
@@ -270,7 +270,7 @@ export default function Landing() {
               <div>
                 <h4 className="font-heading text-white font-bold mb-4">Quick Links</h4>
                 <div className="space-y-2 text-sm">
-                  <Link to="/signup/role" className="block hover:text-white/80 transition-colors">Get Started</Link>
+                  <Link to="/signup" className="block hover:text-white/80 transition-colors">Get Started</Link>
                   <Link to="/login" className="block hover:text-white/80 transition-colors">Log In</Link>
                   <a href="#features" className="block hover:text-white/80 transition-colors">Features</a>
                   <a href="#faq" className="block hover:text-white/80 transition-colors">FAQ</a>
