@@ -69,11 +69,7 @@ service cloud.firestore {
     }
 
     match /tasks/{taskId} {
-      allow read: if isSignedIn() && (
-        (isTeen() && teenCanSeeOpenTask()) ||
-        (isParent() && resource.data.applicantTeenUid == userDoc().data.linkedTeenUid) ||
-        (isNeighbor() && resource.data.neighborUid == request.auth.uid)
-      );
+      allow read: if isSignedIn();
 
       allow create: if isNeighbor() && request.resource.data.neighborUid == request.auth.uid;
 
