@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { browserSessionPersistence, getAuth, GoogleAuthProvider, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getMessaging, isSupported } from 'firebase/messaging';
@@ -21,6 +21,11 @@ export const db = app ? getFirestore(app) : null;
 export const storage = app ? getStorage(app) : null;
 export const googleProvider = new GoogleAuthProvider();
 export const firebaseReady = Boolean(app);
+
+if (auth) {
+  // Require manual login when a browser session ends.
+  setPersistence(auth, browserSessionPersistence).catch(() => {});
+}
 
 export async function getFirebaseMessaging() {
   if (!app) return null;
