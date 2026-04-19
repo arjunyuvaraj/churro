@@ -123,13 +123,8 @@ export default function Landing() {
                 { num: '01', text: 'Neighbor Posts' },
                 { num: '02', text: 'Teen Applies' },
                 { num: '03', text: 'Parent Approves' },
-<<<<<<< HEAD
-                { num: '04', text: 'Task Happens Safely' },
-                { num: '05', text: 'Teens Earn Rewards' }
-=======
                 { num: '04', text: 'Teen Works' },
-                { num: '05', text: 'Teen Earns' }
->>>>>>> 0ba622e11df2b94bd8dfd96defee99bcd77928f2
+                { num: '05', text: 'Teens Earns' }
               ].map((step) => (
                 <div key={step.num} className="flex items-baseline gap-6 group cursor-default">
                   <span className="font-heading text-6xl lg:text-7xl font-bold tracking-tighter text-white/30 transition-colors duration-300 group-hover:text-white">{step.num}</span>
