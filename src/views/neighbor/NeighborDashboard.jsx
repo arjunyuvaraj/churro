@@ -15,10 +15,10 @@ export default function NeighborDashboard() {
     'neighbor'
   );
 
-  const activeCount = useMemo(() => tasks.filter(t => ['active', 'in_progress', 'pending_confirmation'].includes(t.status)).length, [tasks]);
+  const activeCount = useMemo(() => tasks.filter(t => ['open', 'active', 'in_progress', 'pending_confirmation'].includes(t.status)).length, [tasks]);
   const applicantCount = useMemo(() => tasks.filter(t => t.status === 'pending_neighbor_approval' || t.status === 'pending_parent_approval').length, [tasks]);
   const completedCount = useMemo(() => tasks.filter(t => t.status === 'completed').length, [tasks]);
-  const totalSpent = useMemo(() => tasks.filter(t => t.status === 'completed').reduce((sum, t) => sum + (t.pay || 0), 0), [tasks]);
+  const totalSpent = useMemo(() => tasks.filter(t => t.status === 'completed').reduce((sum, t) => sum + (Number(t.pay.replace(/[^0-9.-]+/g, "")) || 0), 0), [tasks]);
 
   if (loading) {
     return <AppShell><SkeletonFeed count={2} /></AppShell>;

@@ -16,17 +16,18 @@ export default function ParentEarnings() {
             .reduce((acc, task) => {
                 const date = task.completedAt?.toDate?.() ? new Date(task.completedAt.toDate()).toISOString().split('T')[0] : task.date || 'Unknown';
                 const found = acc.find((e) => e.week === date);
+                const numericPay = Number(String(task.pay || '0').replace(/[^0-9.-]+/g, '')) || 0;
                 if (found) {
-                    found.value += task.pay;
+                    found.value += numericPay;
                 } else {
-                    acc.push({ week: date, value: task.pay });
+                    acc.push({ week: date, value: numericPay });
                 }
                 return acc;
             }, [])
             .slice(-8);
     }, [auth?.profile?.linkedTeenUid, completedTasks]);
 
-    const totalEarnings = completedTasks?.reduce((sum, task) => sum + (task.pay || 0), 0) || 0;
+    const totalEarnings = completedTasks?.reduce((sum, task) => sum + (Number(String(task.pay || '0').replace(/[^0-9.-]+/g, '')) || 0), 0) || 0;
 
     if (loading) {
         return <AppShell><PageState title="Loading rewards" description="Fetching teen rewards history." /></AppShell>;

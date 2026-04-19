@@ -4,6 +4,7 @@ import AppShell from '../../components/AppShell';
 import PageState from '../../components/PageState';
 import StatusBadge from '../../components/StatusBadge';
 import { SkeletonFeed } from '../../components/Skeleton';
+import RatingPrompt from '../../components/RatingPrompt';
 import { useAuth } from '../../lib/useAuth';
 import { useUserTasks } from '../../lib/useTask';
 
@@ -17,7 +18,7 @@ export default function NeighborTasks() {
 
     const [activeTab, setActiveTab] = useState('active');
 
-    const activeTasks = useMemo(() => tasks.filter(t => ['active', 'in_progress', 'pending_confirmation'].includes(t.status)), [tasks]);
+    const activeTasks = useMemo(() => tasks.filter(t => ['open', 'active', 'in_progress', 'pending_confirmation'].includes(t.status)), [tasks]);
     const applicantTasks = useMemo(() => tasks.filter(t => t.status === 'pending_neighbor_approval' || t.status === 'pending_parent_approval'), [tasks]);
     const pastTasks = useMemo(() => tasks.filter(t => t.status === 'completed'), [tasks]);
 
@@ -105,15 +106,19 @@ export default function NeighborTasks() {
                                 <PageState title="No past tasks" description="Completed tasks and payment history will appear here." />
                             ) : (
                                 pastTasks.map(task => (
-                                    <button
-                                        key={task.id}
-                                        type="button"
-                                        onClick={() => navigate(`/neighbor/task/${task.id}`)}
-                                        className="w-full text-left rounded-xl border border-border bg-white p-5 transition hover:border-primary/50"
-                                    >
-                                        <p className="font-semibold">{task.title}</p>
-                                        <p className="text-sm text-text-secondary">Completed on {task.completedAt?.toDate?.() ? new Date(task.completedAt.toDate()).toLocaleDateString() : task.date}</p>
-                                    </button>
+                                    <div key={task.id} className="space-y-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(`/neighbor/task/${task.id}`)}
+                                            className="w-full text-left rounded-xl border border-border bg-white p-5 transition hover:border-primary/50"
+                                        >
+                                            <p className="font-semibold">{task.title}</p>
+                                            <p className="text-sm text-text-secondary">Completed on {task.completedAt?.toDate?.() ? new Date(task.completedAt.toDate()).toLocaleDateString() : task.date}</p>
+                                        </button>
+                                        <div className="pl-2 pr-2">
+                                            <RatingPrompt task={task} ratedUid={task.applicantTeenUid} title="Rate the teen" />
+                                        </div>
+                                    </div>
                                 ))
                             )}
                         </div>

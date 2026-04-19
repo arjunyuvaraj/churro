@@ -228,8 +228,13 @@ export async function confirmCompletion({ task, teenUid, neighborUid }) {
 
     const teenRef = doc(db, 'users', teenUid);
     const neighborRef = doc(db, 'users', neighborUid);
+
+    // MVP Money parsing
+    const numericPay = Number(String(currentTask.pay || '0').replace(/[^0-9.-]+/g, '')) || 0;
+
     transaction.update(teenRef, {
-      completedTasks: increment(1)
+      completedTasks: increment(1),
+      balance: increment(numericPay)
     });
     transaction.update(neighborRef, {
       completedTasks: increment(1)

@@ -9,12 +9,24 @@ export default function Earnings() {
   const auth = useAuth();
   const { data: tasks, loading } = useTasksForFeed();
 
-  const chartData = useMemo(() => {
-    const weekly = auth?.profile?.weeklyEarnings || {};
-    return Object.entries(weekly).map(([week, value]) => ({ week, value }));
-  }, [auth?.profile?.weeklyEarnings]);
-
   const completedTasks = tasks.filter((task) => task.applicantTeenUid === auth?.currentUser?.uid && task.status === 'completed');
+
+  const chartData = useMemo(() => {
+    if (!completedTasks?.length) return [];
+    return completedTasks
+      .reduce((acc, task) => {
+        const date = task.completedAt?.toDate?.() ? new Date(task.completedAt.toDate()).toISOString().split('T')[0] : task.date || 'Unknown';
+        const found = acc.find((e) => e.week === date);
+        const numericPay = Number(String(task.pay || '0').replace(/[^0-9.-]+/g, '')) || 0;
+        if (found) {
+          found.value += numericPay;
+        } else {
+          acc.push({ week: date, value: numericPay });
+        }
+        return acc;
+      }, [])
+      .slice(-8);
+  }, [completedTasks]);
 
   if (loading) {
     return <AppShell><PageState title="Loading rewards" description="Fetching your rewards history." /></AppShell>;
