@@ -11,7 +11,12 @@ import { useUserTasks } from '../../lib/useTask';
 export default function NeighborDashboard() {
   const auth = useAuth();
   const navigate = useNavigate();
-  const { data: tasks, loading } = useUserTasks(auth?.currentUser?.uid, 'neighbor');
+
+  const { data: tasks = [], loading } = useUserTasks(
+    auth?.currentUser?.uid,
+    'neighbor'
+  );
+
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
 
@@ -26,9 +31,14 @@ export default function NeighborDashboard() {
         <div className="rounded-2xl border border-border bg-card p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-dark">Neighbor dashboard</p>
-              <h1 className="mt-2 font-heading text-3xl font-extrabold text-text-primary">Posted tasks</h1>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-dark">
+                Neighbor dashboard
+              </p>
+              <h1 className="mt-2 font-heading text-3xl font-extrabold text-text-primary">
+                Posted tasks
+              </h1>
             </div>
+
             <div className="flex gap-2">
               <button
                 type="button"
@@ -37,6 +47,7 @@ export default function NeighborDashboard() {
               >
                 Bulk schedule
               </button>
+
               <button
                 type="button"
                 onClick={() => navigate('/neighbor/post-task')}
@@ -63,6 +74,7 @@ export default function NeighborDashboard() {
             >
               List view
             </button>
+
             <button
               type="button"
               onClick={() => setViewMode('calendar')}
@@ -77,17 +89,30 @@ export default function NeighborDashboard() {
           </div>
         </div>
 
-        {loading ? <SkeletonFeed count={3} /> : null}
-        {!loading && !tasks.length ? <PageState title="No tasks yet" description="Post your first task to get started." /> : null}
+
+        {/* Empty state*/}
+        {loading && !tasksToDisplay.length && (
+          <PageState
+            title="No tasks yet"
+            description="Post your first task to get started."
+          />
+        )}
 
         {/* Calendar view */}
         {viewMode === 'calendar' && !loading && (
           <div>
-            <TaskCalendar tasks={tasks} onDateSelect={setSelectedCalendarDate} />
+            <TaskCalendar
+              tasks={tasks}
+              onDateSelect={setSelectedCalendarDate}
+            />
+
             {selectedCalendarDate && (
               <div className="mt-4 rounded-2xl border border-border bg-card p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <p className="font-semibold text-text-primary">Tasks on {selectedCalendarDate}</p>
+                  <p className="font-semibold text-text-primary">
+                    Tasks on {selectedCalendarDate}
+                  </p>
+
                   <button
                     type="button"
                     onClick={() => setSelectedCalendarDate(null)}
@@ -109,22 +134,42 @@ export default function NeighborDashboard() {
                 <button
                   key={task.id}
                   type="button"
-                  onClick={() => navigate(`/neighbor/task/${task.id}`)}
+                  onClick={() =>
+                    navigate(`/neighbor/task/${task.id}`)
+                  }
                   className="rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-soft card-hover"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="font-heading text-xl font-bold text-text-primary">{task.title}</h2>
-                      <p className="mt-1 text-sm text-text-secondary">{task.date} · Reward: {task.pay}</p>
+                      <h2 className="font-heading text-xl font-bold text-text-primary">
+                        {task.title}
+                      </h2>
+                      <p className="mt-1 text-sm text-text-secondary">
+                        {task.date} · Reward: {task.pay}
+                      </p>
                     </div>
                     <StatusBadge status={task.status} />
                   </div>
-                  <p className="mt-3 text-sm text-text-secondary line-clamp-2">{task.description}</p>
+
+                  <p className="mt-3 text-sm text-text-secondary line-clamp-2">
+                    {task.description}
+                  </p>
                 </button>
               ))
             ) : (
               <div className="col-span-full">
-                <PageState title="No tasks on this date" description="Select a different date or create a new task." />
+                <PageState
+                  title={
+                    selectedCalendarDate
+                      ? 'No tasks on this date'
+                      : 'No tasks yet'
+                  }
+                  description={
+                    selectedCalendarDate
+                      ? 'Select a different date or create a new task.'
+                      : 'Post your first task to get started.'
+                  }
+                />
               </div>
             )}
           </div>
