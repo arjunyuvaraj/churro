@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { doc, runTransaction } from 'firebase/firestore';
 import AppShell from '../../components/AppShell';
 import PageState from '../../components/PageState';
 import StatusBadge from '../../components/StatusBadge';
 import { SkeletonCard, SkeletonFeed } from '../../components/Skeleton';
-import { db } from '../../lib/firebase';
 import { parentDecision, useNotifications, useTasksForFeed, useCompletedTasksByTeen } from '../../lib/useTask';
 import { useAuth } from '../../lib/useAuth';
 
@@ -15,8 +13,9 @@ export default function ParentDashboard() {
   const { data: tasks, loading } = useTasksForFeed();
   const { data: completedTasks } = useCompletedTasksByTeen(auth?.profile?.linkedTeenUid);
   const notifications = useNotifications(auth?.currentUser?.uid);
-  const [teenUidInput, setTeenUidInput] = useState('');
-  const [linking, setLinking] = useState(false);
+  const pendingInvitations = auth?.pendingInvitations || [];
+  const [invitationLoading, setInvitationLoading] = useState(null);
+  const [invitationError, setInvitationError] = useState('');
 
   const pendingTasks = useMemo(() => tasks.filter((task) => task.status === 'pending_parent_approval' && task.applicantTeenUid === auth?.profile?.linkedTeenUid), [tasks, auth?.profile?.linkedTeenUid]);
   const activeTask = useMemo(() => tasks.find((task) => task.applicantTeenUid === auth?.profile?.linkedTeenUid && ['active', 'in_progress', 'pending_confirmation'].includes(task.status)), [tasks, auth?.profile?.linkedTeenUid]);
@@ -47,23 +46,27 @@ export default function ParentDashboard() {
     await parentDecision({ task, approved, parentUid: auth.currentUser.uid, teenUid: auth.profile.linkedTeenUid });
   }
 
-  async function linkTeen() {
-    if (!auth?.currentUser || !teenUidInput || !db) return;
-    setLinking(true);
+  async function handleAcceptInvitation(invitationId) {
+    setInvitationLoading(invitationId);
+    setInvitationError('');
     try {
-      await runTransaction(db, async (transaction) => {
-        const parentRef = doc(db, 'users', auth.currentUser.uid);
-        const teenRef = doc(db, 'users', teenUidInput.trim());
-        const parentSnapshot = await transaction.get(parentRef);
-        const teenSnapshot = await transaction.get(teenRef);
-        if (!parentSnapshot.exists() || !teenSnapshot.exists()) {
-          throw new Error('Unable to find one of the accounts.');
-        }
-        transaction.update(parentRef, { linkedTeenUid: teenUidInput.trim() });
-        transaction.update(teenRef, { linkedParentUid: auth.currentUser.uid, parentApproved: true });
-      });
+      await auth.acceptParentInvitationById(invitationId);
+    } catch (err) {
+      setInvitationError(err.message || 'Unable to accept invitation.');
     } finally {
-      setLinking(false);
+      setInvitationLoading(null);
+    }
+  }
+
+  async function handleDeclineInvitation(invitationId) {
+    setInvitationLoading(invitationId);
+    setInvitationError('');
+    try {
+      await auth.declineParentInvitationById(invitationId);
+    } catch (err) {
+      setInvitationError(err.message || 'Unable to decline invitation.');
+    } finally {
+      setInvitationLoading(null);
     }
   }
 
@@ -78,17 +81,37 @@ export default function ParentDashboard() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-dark">Parent dashboard</p>
           <h1 className="mt-2 font-heading text-3xl font-extrabold text-text-primary">{auth?.profile?.linkedTeenUid ? 'Teen status' : 'Link a teen account'}</h1>
           <p className="mt-2 text-text-secondary">Live status updates refresh as the teen changes check-in states.</p>
-          {!auth?.profile?.linkedTeenUid ? (
+
+          {/* Pending invitations — replaces the old manual UID paste */}
+          {!auth?.profile?.linkedTeenUid && pendingInvitations.length > 0 ? (
+            <div className="mt-4 space-y-3">
+              {invitationError ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{invitationError}</div>
+              ) : null}
+              {pendingInvitations.map((inv) => (
+                <div key={inv.id} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-text-primary">{inv.teenName || 'A teen'} wants to link accounts</p>
+                    <p className="text-xs text-text-secondary">Accept to start monitoring their tasks and activity</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => handleAcceptInvitation(inv.id)} disabled={invitationLoading === inv.id} className="rounded-xl bg-success px-5 py-2.5 text-sm font-semibold text-white hover:bg-success/90 transition disabled:opacity-50">
+                      {invitationLoading === inv.id ? 'Linking...' : 'Accept'}
+                    </button>
+                    <button type="button" onClick={() => handleDeclineInvitation(inv.id)} disabled={invitationLoading === inv.id} className="rounded-xl bg-danger px-5 py-2.5 text-sm font-semibold text-white hover:bg-danger/90 transition disabled:opacity-50">
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : !auth?.profile?.linkedTeenUid ? (
             <div className="mt-4 rounded-xl border border-border bg-surface p-4">
-              <p className="text-sm font-semibold text-text-primary">Paste teen account ID to link</p>
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                <input value={teenUidInput} onChange={(event) => setTeenUidInput(event.target.value)} className="flex-1 rounded-xl border border-border bg-card px-4 py-3 text-text-primary outline-none focus:border-primary transition" placeholder="Teen UID" />
-                <button type="button" onClick={linkTeen} disabled={linking} className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-dark transition disabled:opacity-50">
-                  {linking ? 'Linking...' : 'Link teen'}
-                </button>
-              </div>
+              <p className="font-semibold text-text-primary">No teen account linked yet</p>
+              <p className="text-sm text-text-secondary mt-1">When a teen signs up with your email address, their invitation will appear here automatically.</p>
             </div>
           ) : null}
+
           {auth?.profile?.linkedTeenUid && activeTask ? (
             <div className="mt-4 rounded-xl bg-surface p-4">
               <div className="mb-4 flex items-center justify-between gap-4">

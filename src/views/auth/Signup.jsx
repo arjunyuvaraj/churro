@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/useAuth';
+import { navigateToRoleDashboard } from './Login';
 
 function useRoleFromQuery() {
   const location = useLocation();
-  return useMemo(() => new URLSearchParams(location.search).get('role') || 'teen', [location.search]);
+  return useMemo(() => new URLSearchParams(location.search).get('role') || '', [location.search]);
 }
 
 export default function Signup() {
@@ -12,11 +13,16 @@ export default function Signup() {
   const navigate = useNavigate();
   const location = useLocation();
   const inviteToken = new URLSearchParams(location.search).get('inviteToken');
-  const initialRole = location.state?.accountType || useRoleFromQuery();
+  const queryRole = useRoleFromQuery();
   const initialGoogleSignup = Boolean(location.state?.fromGoogle || new URLSearchParams(location.search).get('fromGoogle') === '1');
 
-  const [role, setRole] = useState(initialRole);
-  const [step, setStep] = useState('accountType');
+  const [role, setRole] = useState(location.state?.accountType || queryRole || 'teen');
+  const [step, setStep] = useState(() => {
+    // If we come from Google auth, skip to account type selection (no email/password needed)
+    // If role is pre-set via query param, go to details
+    if (queryRole) return 'details';
+    return 'accountType';
+  });
   const [googleSignupMode, setGoogleSignupMode] = useState(initialGoogleSignup);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -49,22 +55,25 @@ export default function Signup() {
     }
   ];
 
+  // If we arrive via Google and no role was already in query, force accountType step
   useEffect(() => {
-    if (!auth?.loading && auth?.isAuthenticated && auth?.role) {
+    if (initialGoogleSignup && !queryRole && step !== 'accountType') {
+      setStep('accountType');
+    }
+  }, []);
+
+  // Redirect if already authenticated with a complete profile
+  useEffect(() => {
+    if (auth?.loading) return;
+
+    if (auth?.isAuthenticated && auth?.role) {
       if (inviteToken && auth.role === 'parent') {
         navigate(`/accept-parent-invite?token=${encodeURIComponent(inviteToken)}`, { replace: true });
         return;
       }
-      const from = location.state?.from?.pathname;
-      if (from && from !== '/signup') {
-        navigate(from, { replace: true });
-      } else if (auth.role === 'teen') {
-        navigate('/teen/survey', { replace: true });
-      } else {
-        navigate(`/${auth.role}`, { replace: true });
-      }
+      navigateToRoleDashboard(auth, navigate);
     }
-  }, [auth?.loading, auth?.isAuthenticated, auth?.role, navigate, location, inviteToken]);
+  }, [auth?.loading, auth?.isAuthenticated, auth?.role, auth?.profile?.surveyCompleted, auth?.profile?.onboardingComplete, navigate, inviteToken]);
 
   function validateRequiredFields() {
     const missing = [];
@@ -74,10 +83,25 @@ export default function Signup() {
       if (!fullName.trim()) missing.push('full name');
       if (!email.trim()) missing.push('email');
       if (!password.trim()) missing.push('password');
+      else if (password.trim().length < 8) {
+        return 'Password must be at least 8 characters.';
+      }
     }
 
     if (role === 'teen') {
       if (!dateOfBirth.trim()) missing.push('date of birth');
+      else {
+        const dob = new Date(dateOfBirth);
+        const now = new Date();
+        let age = now.getFullYear() - dob.getFullYear();
+        const monthDiff = now.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+          age--;
+        }
+        if (age < 13 || age > 17) {
+          return 'Teens must be between 13 and 17 years old.';
+        }
+      }
       if (!parentEmail.trim()) missing.push('parent email');
     }
 
@@ -113,6 +137,7 @@ export default function Signup() {
       } else {
         await auth.signup({ email, password, fullName, role, dateOfBirth, address, parentEmail });
       }
+      // Redirect will happen automatically via the useEffect above once profile loads
     } catch (currentError) {
       setError(getReadableAuthError(currentError));
     } finally {
@@ -127,8 +152,9 @@ export default function Signup() {
       const result = await auth.loginWithGoogle();
       if (result.isNewUser) {
         setGoogleSignupMode(true);
-        setStep('details');
+        // Stay on details step — they already picked a role and now just need role-specific fields
       }
+      // Existing users will be redirected by the useEffect
     } catch (currentError) {
       setError(getReadableAuthError(currentError));
     } finally {
@@ -136,16 +162,29 @@ export default function Signup() {
     }
   }
 
+  // Password strength indicator
+  const passwordStrength = useMemo(() => {
+    if (!password) return null;
+    if (password.length < 8) return { label: 'Too short', color: 'text-red-500', bg: 'bg-red-500', width: '25%' };
+    if (password.length < 12) return { label: 'Fair', color: 'text-amber-500', bg: 'bg-amber-500', width: '50%' };
+    if (/[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) {
+      return { label: 'Strong', color: 'text-green-600', bg: 'bg-green-500', width: '100%' };
+    }
+    return { label: 'Good', color: 'text-emerald-500', bg: 'bg-emerald-500', width: '75%' };
+  }, [password]);
+
   return (
     <div className="min-h-screen bg-[#fff7ed] text-slate-950 lg:grid lg:grid-cols-[1.14fr_0.86fr]">
       <section className="relative isolate flex flex-col justify-between overflow-hidden bg-[#FF5500] px-8 py-10 text-white sm:px-12 lg:px-16 lg:py-12">
         <div className="flex flex-1 flex-col justify-center">
           <div className="max-w-xl pb-8">
             <h1 className="max-w-md text-5xl font-black tracking-tighter text-white sm:text-6xl lg:text-[4.8rem] lg:leading-[0.95]">
-              Create an account in two steps.
+              {isGoogleSignup ? 'Almost there.' : 'Create an account in two steps.'}
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/90 sm:text-xl">
-              Choose the account type first, then finish the actual details in the same panel. No popups, no separate window.
+              {isGoogleSignup
+                ? 'We just need a few more details to set up your account. Choose your role and fill in the specifics.'
+                : 'Choose the account type first, then finish the actual details in the same panel. No popups, no separate window.'}
             </p>
           </div>
         </div>
@@ -184,8 +223,9 @@ export default function Signup() {
 
               <button
                 type="button"
-                onClick={() => setStep('details')}
-                className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                onClick={() => { setError(''); setStep('details'); }}
+                disabled={!role}
+                className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
               >
                 Continue
               </button>
@@ -195,7 +235,7 @@ export default function Signup() {
               <div className="flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => setStep('accountType')}
+                  onClick={() => { setStep('accountType'); setError(''); }}
                   className="text-sm font-semibold text-orange-700 underline decoration-orange-200 underline-offset-4 transition hover:decoration-orange-700"
                 >
                   Back
@@ -251,6 +291,7 @@ export default function Signup() {
                           type={showPassword ? 'text' : 'password'}
                           value={password}
                           onChange={(event) => setPassword(event.target.value)}
+                          minLength={8}
                           required
                         />
                         <button
@@ -261,20 +302,33 @@ export default function Signup() {
                           {showPassword ? 'Hide' : 'Show'}
                         </button>
                       </div>
+                      {passwordStrength ? (
+                        <div className="mt-2">
+                          <div className="h-1 w-full rounded-full bg-slate-200 overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-300 ${passwordStrength.bg}`} style={{ width: passwordStrength.width }} />
+                          </div>
+                          <p className={`mt-1 text-xs font-medium ${passwordStrength.color}`}>{passwordStrength.label}{password.length < 8 ? ' — minimum 8 characters' : ''}</p>
+                        </div>
+                      ) : null}
                     </label>
                   </>
-                ) : null}
+                ) : (
+                  <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    Signed in as <span className="font-semibold">{auth?.currentUser?.email}</span>. Just fill in the details below.
+                  </div>
+                )}
 
                 {role === 'teen' ? (
                   <>
                     <label className="block">
                       <span className="mb-1.5 block text-sm font-semibold text-slate-900">Date of birth</span>
                       <input className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-slate-950 outline-none transition focus:border-orange-500" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} required />
+                      <p className="mt-1 text-xs text-slate-400">You must be between 13 and 17 years old</p>
                     </label>
 
                     <label className="block">
                       <span className="mb-1.5 block text-sm font-semibold text-slate-900">Parent or guardian email</span>
-                      <input className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-slate-950 outline-none transition focus:border-orange-500" type="email" value={parentEmail} onChange={(event) => setParentEmail(event.target.value)} placeholder="We’ll send them an invite" required />
+                      <input className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-slate-950 outline-none transition focus:border-orange-500" type="email" value={parentEmail} onChange={(event) => setParentEmail(event.target.value)} placeholder="We'll send them an invite" required />
                     </label>
                   </>
                 ) : null}
@@ -283,6 +337,7 @@ export default function Signup() {
                   <label className="block">
                     <span className="mb-1.5 block text-sm font-semibold text-slate-900">Home address</span>
                     <input className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3.5 text-slate-950 outline-none transition focus:border-orange-500" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Used for verification only" required />
+                    <p className="mt-1 text-xs text-slate-400">Your address will be verified before you can post tasks</p>
                   </label>
                 ) : null}
 
@@ -314,16 +369,25 @@ export default function Signup() {
 function getReadableAuthError(error) {
   const message = error?.message || '';
   if (message.includes('auth/configuration-not-found') || message.includes('CONFIGURATION_NOT_FOUND')) {
-    return 'Firebase Auth is not enabled for this project yet. Open Firebase Console -> Authentication -> Get started -> enable Email/Password, then retry.';
+    return 'Firebase Auth is not enabled for this project yet. Open Firebase Console → Authentication → Get started → enable Email/Password, then retry.';
   }
   if (message.includes('auth/operation-not-allowed')) {
-    return 'Email/password sign-in is disabled. Enable it in Firebase Console -> Authentication -> Sign-in method.';
+    return 'Email/password sign-in is disabled. Enable it in Firebase Console → Authentication → Sign-in method.';
   }
   if (message.includes('auth/popup-closed-by-user')) {
     return 'Sign-in popup was closed. Please try again.';
   }
   if (message.includes('auth/email-already-in-use')) {
     return 'An account with this email already exists. Try logging in instead.';
+  }
+  if (message.includes('auth/weak-password')) {
+    return 'Password is too weak. Please use at least 8 characters.';
+  }
+  if (message.includes('Teens must be between')) {
+    return message;
+  }
+  if (message.includes('Password must be at least')) {
+    return message;
   }
   if (message.includes('Missing required fields:')) {
     return message;

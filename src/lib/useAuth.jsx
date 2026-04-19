@@ -3,6 +3,7 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   reload,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut
@@ -33,10 +34,25 @@ function validateRequiredSignupInput({ email, password, fullName, role, dateOfBi
     if (!fullName?.trim()) missing.push('full name');
     if (!email?.trim()) missing.push('email');
     if (!password?.trim()) missing.push('password');
+    else if (password.trim().length < 8) {
+      throw new Error('Password must be at least 8 characters.');
+    }
   }
 
   if (role === 'teen') {
     if (!dateOfBirth?.trim()) missing.push('date of birth');
+    else {
+      const dob = new Date(dateOfBirth);
+      const now = new Date();
+      let age = now.getFullYear() - dob.getFullYear();
+      const monthDiff = now.getMonth() - dob.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+        age--;
+      }
+      if (age < 13 || age > 17) {
+        throw new Error('Teens must be between 13 and 17 years old.');
+      }
+    }
     if (!parentEmail?.trim()) missing.push('parent email');
   }
 
@@ -53,14 +69,16 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pendingInvitations, setPendingInvitations] = useState([]);
 
+  // Main auth + profile listener
   useEffect(() => {
     if (!firebaseReady) {
       setLoading(false);
       return undefined;
     }
 
-    let unsubscribeProfile = () => {};
+    let unsubscribeProfile = () => { };
 
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       setLoading(true);
@@ -81,7 +99,7 @@ export function AuthProvider({ children }) {
 
         // Backfill legacy records where accountType exists but role was not written.
         if (profileData && !profileData.role && profileData.accountType) {
-          setDoc(userRef, { role: profileData.accountType }, { merge: true }).catch(() => {});
+          setDoc(userRef, { role: profileData.accountType }, { merge: true }).catch(() => { });
           setProfile({ ...profileData, role: profileData.accountType });
           setLoading(false);
           return;
@@ -89,7 +107,7 @@ export function AuthProvider({ children }) {
 
         setProfile(profileData);
         setLoading(false);
-      }, (error) => {
+      }, () => {
         // Keep login usable even if profile read fails.
         setLoading(false);
       });
@@ -100,6 +118,26 @@ export function AuthProvider({ children }) {
       unsubscribeAuth();
     };
   }, []);
+
+  // Real-time listener for pending invitations (parent accounts)
+  useEffect(() => {
+    if (!firebaseReady || !db || !profile?.email || profile?.role !== 'parent') {
+      setPendingInvitations([]);
+      return undefined;
+    }
+
+    const invitationsQuery = query(
+      collection(db, 'invitations'),
+      where('parentEmail', '==', normalizeEmail(profile.email)),
+      where('status', '==', 'pending')
+    );
+
+    return onSnapshot(invitationsQuery, (snapshot) => {
+      setPendingInvitations(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, () => {
+      setPendingInvitations([]);
+    });
+  }, [profile?.email, profile?.role]);
 
   async function signup({ email, password, fullName, role, dateOfBirth, address, parentEmail }) {
     if (!firebaseReady) throw new Error('Firebase is not configured. Set VITE_ env variables first.');
@@ -114,10 +152,10 @@ export function AuthProvider({ children }) {
     const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
     const uid = credential.user.uid;
     const userRef = doc(db, 'users', uid);
-    
-    await setDoc(userRef, { 
-      ...getBaseProfile(uid, normalizedEmail, trimmedFullName, role), 
-      ...getExtraProfile(role, dateOfBirth, trimmedAddress, normalizedParentEmail) 
+
+    await setDoc(userRef, {
+      ...getBaseProfile(uid, normalizedEmail, trimmedFullName, role),
+      ...getExtraProfile(role, dateOfBirth, trimmedAddress, normalizedParentEmail)
     });
 
     if (role === 'teen') {
@@ -141,23 +179,23 @@ export function AuthProvider({ children }) {
         parentInvitationStatus: 'pending'
       }, { merge: true });
     }
-    
+
     return credential.user;
   }
 
   async function loginWithGoogle() {
     if (!firebaseReady) throw new Error('Firebase is not configured.');
-    
+
     const result = await signInWithPopup(auth, googleProvider);
     const uid = result.user.uid;
-    
-    // Check if user already exists
+
+    // Check if user already exists in Firestore
     const userDoc = await getDoc(doc(db, 'users', uid));
     if (userDoc.exists()) {
       return { user: result.user, isNewUser: false };
     }
-    
-    // Return early to let the UI redirect them to complete profile using completeGoogleSignup
+
+    // New user — they need to complete profile setup
     return { user: result.user, isNewUser: true };
   }
 
@@ -180,10 +218,10 @@ export function AuthProvider({ children }) {
     const trimmedName = currentUser.displayName?.trim() || 'Volunteer';
     const trimmedAddress = address?.trim();
     const userRef = doc(db, 'users', currentUser.uid);
-    
-    await setDoc(userRef, { 
-      ...getBaseProfile(currentUser.uid, normalizedEmail, trimmedName, role), 
-      ...getExtraProfile(role, dateOfBirth, trimmedAddress, normalizedParentEmail) 
+
+    await setDoc(userRef, {
+      ...getBaseProfile(currentUser.uid, normalizedEmail, trimmedName, role),
+      ...getExtraProfile(role, dateOfBirth, trimmedAddress, normalizedParentEmail)
     });
 
     if (role === 'teen') {
@@ -207,7 +245,7 @@ export function AuthProvider({ children }) {
         parentInvitationStatus: 'pending'
       }, { merge: true });
     }
-    
+
     return currentUser;
   }
 
@@ -217,6 +255,27 @@ export function AuthProvider({ children }) {
       throw new Error('Missing required fields: email, password');
     }
     return signInWithEmailAndPassword(auth, normalizeEmail(email), password);
+  }
+
+  async function passwordReset(email) {
+    if (!firebaseReady) throw new Error('Firebase is not configured.');
+    if (!email?.trim()) throw new Error('Please enter your email address.');
+    await sendPasswordResetEmail(auth, normalizeEmail(email));
+  }
+
+  async function completeParentOnboarding(prefs = {}) {
+    if (!firebaseReady || !currentUser) throw new Error('Not authenticated.');
+    if (profile?.role !== 'parent') throw new Error('Only parent accounts can complete onboarding.');
+
+    const userRef = doc(db, 'users', currentUser.uid);
+    await setDoc(userRef, {
+      teenRadiusLimit: prefs.teenRadiusLimit ?? 1,
+      approvedCategories: prefs.approvedCategories ?? [],
+      weeklyEarningsCap: prefs.weeklyEarningsCap ?? null,
+      autoApprove: prefs.autoApprove ?? false,
+      onboardingComplete: true,
+      onboardingCompletedAt: serverTimestamp()
+    }, { merge: true });
   }
 
   async function acceptParentInvitation(token) {
@@ -410,6 +469,12 @@ export function AuthProvider({ children }) {
     return profile;
   }
 
+  // Derived state booleans
+  const role = profile?.role || null;
+  const hasProfile = Boolean(profile && role);
+  const needsProfileSetup = Boolean(currentUser && !hasProfile);
+  const needsOnboarding = role === 'parent' && !profile?.onboardingComplete;
+
   const value = useMemo(
     () => ({
       currentUser,
@@ -420,17 +485,23 @@ export function AuthProvider({ children }) {
       loginWithGoogle,
       completeGoogleSignup,
       logout,
+      passwordReset,
+      completeParentOnboarding,
       updateTeenSkills,
       acceptParentInvitation,
       acceptParentInvitationById,
       declineParentInvitationById,
       resendParentInvitationRequest,
-      isAuthenticated: Boolean(currentUser),
-      role: profile?.role || null,
-      accountType: profile?.accountType || profile?.role || null,
+      pendingInvitations,
+      // Only authenticated when we have both a Firebase user AND a Firestore profile with a role
+      isAuthenticated: Boolean(currentUser && hasProfile),
+      needsProfileSetup,
+      needsOnboarding,
+      role,
+      accountType: profile?.accountType || role,
       firstName: profile?.fullName ? getFirstName(profile.fullName) : ''
     }),
-    [currentUser, profile, loading]
+    [currentUser, profile, loading, pendingInvitations, hasProfile, needsProfileSetup, needsOnboarding, role]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -455,15 +526,19 @@ function getBaseProfile(uid, email, fullName, role) {
 function getExtraProfile(role, dateOfBirth, address, parentEmail) {
   const isTeen = role === 'teen';
   const isParent = role === 'parent';
-  
+
   if (isTeen) {
     const defaultDate = dateOfBirth ? new Date(dateOfBirth) : new Date();
-    // Prevent the standard "Invalid Date / NaN" timezone bug by forcing standard calc
-    let age = new Date().getFullYear() - defaultDate.getFullYear();
-    
+    const now = new Date();
+    let age = now.getFullYear() - defaultDate.getFullYear();
+    const monthDiff = now.getMonth() - defaultDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < defaultDate.getDate())) {
+      age--;
+    }
+
     return {
       dateOfBirth: defaultDate.toISOString().split('T')[0],
-      age: Math.max(13, isNaN(age) ? 14 : age), // fallback safety
+      age: Math.max(13, isNaN(age) ? 14 : age),
       linkedParentUid: null,
       parentApproved: false,
       bio: '',
@@ -472,21 +547,22 @@ function getExtraProfile(role, dateOfBirth, address, parentEmail) {
       completedTasks: 0,
       averageRating: 0,
       volunteerHours: 0,
-      badgeIds: ['early_adopter'], 
+      badgeIds: ['early_adopter'],
       parentEmail: parentEmail || ''
     };
   }
-  
+
   if (isParent) {
     return {
       linkedTeenUid: null,
       teenRadiusLimit: 1,
       approvedCategories: [],
       weeklyEarningsCap: null,
-      autoApprove: false
+      autoApprove: false,
+      onboardingComplete: false
     };
   }
-  
+
   return {
     address: address || '',
     verified: true,
