@@ -209,7 +209,7 @@ function getExtraProfile(role, dateOfBirth, address, parentEmail) {
   
   return {
     address: address || '',
-    verified: false,
+    verified: true,
     averageRating: 0,
     completedTasks: 0
   };

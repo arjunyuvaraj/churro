@@ -162,7 +162,10 @@ export async function parentDecision({ task, approved, parentUid, teenUid }) {
       });
     } else {
       transaction.update(ref, {
-        status: 'declined'
+        status: 'open',
+        applicantTeenUid: null,
+        teenName: null,
+        teenCheckInStatus: 'none'
       });
     }
   });

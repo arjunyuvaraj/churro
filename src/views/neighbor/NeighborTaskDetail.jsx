@@ -64,27 +64,46 @@ export default function NeighborTaskDetail() {
           <p className="mt-3 text-text-secondary">{task.description}</p>
 
           {/* Teen info */}
-          <div className="mt-5 rounded-xl border border-border bg-surface p-4">
-            <p className="text-sm text-text-secondary">Assigned volunteer</p>
-            <p className="mt-1 font-semibold text-text-primary">{task.teenName || 'Not yet assigned'}</p>
-            <p className="mt-1 text-sm text-text-secondary">Check-in: {(task.teenCheckInStatus || 'none').replaceAll('_', ' ')}</p>
+          <div className="mt-5 rounded-xl border border-border bg-surface p-4 transition-all duration-300 hover:shadow-md">
+            {task.status === 'open' ? (
+              <p className="text-sm font-semibold text-text-secondary">Waiting for a volunteer to apply...</p>
+            ) : (
+              <>
+                <p className="text-sm text-text-secondary">Assigned volunteer</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="font-heading text-lg font-bold text-text-primary">{task.teenName}</p>
+                  {task.status === 'pending_parent_approval' && (
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Waiting for Parent</span>
+                  )}
+                  {task.status !== 'pending_parent_approval' && task.status !== 'open' && (
+                    <div className="flex items-center gap-1 text-success">
+                      <BadgeCheck size={16} />
+                      <span className="text-xs font-semibold">Parent Approved</span>
+                    </div>
+                  )}
+                </div>
+                {task.status !== 'pending_parent_approval' && (
+                   <p className="mt-2 text-sm text-text-secondary">Status: <span className="font-semibold capitalize text-primary">{(task.teenCheckInStatus || 'none').replaceAll('_', ' ')}</span></p>
+                )}
+              </>
+            )}
           </div>
 
           {/* Actions */}
           <div className="mt-5 flex flex-wrap gap-3">
             {(task.teenCheckInStatus === 'done' || task.status === 'pending_confirmation') && (
-              <button type="button" onClick={handleConfirm} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-success px-6 py-3 text-sm font-semibold text-white hover:bg-success/90 transition">
+              <button type="button" onClick={handleConfirm} className="card-hover flex min-h-12 items-center justify-center gap-2 rounded-xl bg-success px-6 py-3 text-sm font-semibold text-white hover:bg-success/90 transition hover:shadow-lg hover:shadow-success/20">
                 <BadgeCheck size={18} />
                 Confirm Completion
               </button>
             )}
             {task.applicantTeenUid && (
-              <button type="button" onClick={handleStartChat} disabled={startingChat} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-sm font-semibold text-text-primary hover:bg-surface transition disabled:opacity-50">
+              <button type="button" onClick={handleStartChat} disabled={startingChat} className="card-hover flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-sm font-semibold text-text-primary hover:bg-surface transition disabled:opacity-50">
                 <MessageCircle size={18} />
                 {startingChat ? 'Opening...' : 'Message teen'}
               </button>
             )}
-            <button type="button" onClick={() => navigate('/neighbor')} className="flex min-h-12 items-center justify-center rounded-xl border border-border bg-card px-6 py-3 text-sm font-semibold text-text-primary hover:bg-surface transition">
+            <button type="button" onClick={() => navigate('/neighbor')} className="card-hover flex min-h-12 items-center justify-center rounded-xl border border-border bg-card px-6 py-3 text-sm font-semibold text-text-primary hover:bg-surface transition">
               Back
             </button>
           </div>

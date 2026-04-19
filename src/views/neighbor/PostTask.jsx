@@ -50,34 +50,7 @@ export default function PostTask() {
     navigate('/neighbor');
   }
 
-  if (!auth?.profile?.verified) {
-    return (
-      <AppShell>
-        <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-white p-6">
-          <PageState title="Verify your address" description="A verification code has been mailed to your address. Enter any 6-digit number below. In production, this uses Lob.com address verification API." />
-          <div className="mt-5 space-y-4">
-            <input className="w-full rounded-xl border border-border px-4 py-3" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value)} placeholder="123456" />
-            <button
-              type="button"
-              disabled={verifying || verificationCode.length !== 6}
-              onClick={async () => {
-                if (!auth?.currentUser || !verificationCode.match(/^\d{6}$/) || !db) return;
-                setVerifying(true);
-                try {
-                  await updateDoc(doc(db, 'users', auth.currentUser.uid), { verified: true });
-                } finally {
-                  setVerifying(false);
-                }
-              }}
-              className="rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {verifying ? 'Verifying...' : 'Verify address'}
-            </button>
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
+
 
   return (
     <AppShell>
