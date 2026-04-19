@@ -5,7 +5,7 @@ const items = {
   teen: [
     { to: '/teen', label: 'Browse', icon: Home },
     { to: '/teen/active', label: 'My Tasks', icon: BriefcaseBusiness },
-    { to: '/teen/earnings', label: 'Earnings', icon: LayoutDashboard },
+    { to: '/teen/earnings', label: 'Rewards', icon: LayoutDashboard },
     { to: '/teen/profile', label: 'Profile', icon: User }
   ],
   parent: [

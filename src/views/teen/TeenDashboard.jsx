@@ -108,8 +108,8 @@ export default function TeenDashboard() {
                 <dd className="font-semibold">{auth?.profile?.approvedCategories?.length || 0}</dd>
               </div>
               <div>
-                <dt className="text-text-secondary">Balance</dt>
-                <dd className="font-mono font-semibold">${auth?.profile?.balance ?? 0}</dd>
+                <dt className="text-text-secondary">Rewards</dt>
+                <dd className="font-mono font-semibold">{auth?.profile?.balance ?? 0}</dd>
               </div>
               <div>
                 <dt className="text-text-secondary">Completed</dt>

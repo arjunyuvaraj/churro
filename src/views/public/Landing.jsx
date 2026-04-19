@@ -33,8 +33,6 @@ export default function Landing() {
                 Post A Task
               </Link>
               <a href="#learn-more" className="text-sm font-medium text-stone-600 transition-colors hover:text-stone-900">Learn More</a>
-              <a href="#faq" className="text-sm font-medium text-stone-600 transition-colors hover:text-stone-900">FAQ</a>
-              <a href="#our-story" className="text-sm font-medium text-stone-600 transition-colors hover:text-stone-900">Our Story</a>
             </nav>
           </div>
 
@@ -94,14 +92,14 @@ export default function Landing() {
         <div className="h-px w-full bg-stone-200 mt-10"></div>
 
         {/* Context Section */}
-        <section className="mx-auto max-w-7xl px-6 py-20 lg:py-32">
+        <section id="learn-more" className="mx-auto max-w-7xl px-6 py-20 lg:py-32">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="max-w-xl">
               <h2 className="font-heading text-5xl sm:text-6xl font-bold tracking-tighter leading-[0.95]">
-                Earn money in your neighborhood. <span className="text-primary">The right way.</span>
+                Help your neighborhood. <span className="text-primary">The right way.</span>
               </h2>
               <p className="mt-6 text-lg tracking-tight text-stone-800 leading-snug">
-                Every gig platform requires you to be 18. Churro doesn't. Earn money doing tasks you can already do including babysitting, yard work, tech help, and much more. Churro connects teens with verified neighbors for paid tasks. With parental approval built in.
+                Earn rewards or volunteer hours doing tasks you can already do including babysitting, yard work, tech help, and much more. Churro connects teens with verified neighbors for rewarding tasks. With parental approval built in.
               </p>
             </div>
             <div className="relative">
@@ -126,7 +124,7 @@ export default function Landing() {
                 { num: '02', text: 'Teen Browses & Applies' },
                 { num: '03', text: 'Parent Approves' },
                 { num: '04', text: 'Task Happens Safely' },
-                { num: '05', text: 'Teens Earn' }
+                { num: '05', text: 'Teens Earn Rewards' }
               ].map((step) => (
                 <div key={step.num} className="flex items-baseline gap-6 group cursor-default">
                   <span className="font-heading text-6xl lg:text-7xl font-bold tracking-tighter text-white/30 transition-colors duration-300 group-hover:text-white">{step.num}</span>

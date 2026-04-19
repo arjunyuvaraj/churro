@@ -66,10 +66,14 @@ a {
 }
 
 /* Micro-interaction globally for buttons and interactive cards */
-button, .card-hover {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+button, a, .card-hover {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-button:active, .card-hover:active {
-  transform: scale(0.97) !important;
+button:hover, a:hover, .card-hover:hover {
+  transform: translateY(-2px);
+}
+
+button:active, a:active, .card-hover:active {
+  transform: translateY(1px) scale(0.97) !important;
 }

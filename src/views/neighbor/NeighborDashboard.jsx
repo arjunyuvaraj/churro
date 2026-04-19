@@ -115,7 +115,7 @@ export default function NeighborDashboard() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h2 className="font-heading text-xl font-bold text-text-primary">{task.title}</h2>
-                      <p className="mt-1 text-sm text-text-secondary">{task.date} · ${task.pay}</p>
+                      <p className="mt-1 text-sm text-text-secondary">{task.date} · Reward: {task.pay}</p>
                     </div>
                     <StatusBadge status={task.status} />
                   </div>

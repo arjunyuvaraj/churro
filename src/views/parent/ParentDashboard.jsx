@@ -118,16 +118,16 @@ export default function ParentDashboard() {
           ) : null}
         </section>
 
-        {/* Earnings widget */}
+        {/* Rewards widget */}
         {auth?.profile?.linkedTeenUid && (
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-border bg-card p-5">
               <p className="text-sm text-text-secondary">Current balance</p>
-              <p className="mt-2 font-mono text-3xl font-bold text-text-primary">${completedTasks?.reduce((sum, task) => sum + (task.pay || 0), 0) || 0}</p>
+              <p className="mt-2 font-mono text-3xl font-bold text-text-primary">{completedTasks?.reduce((sum, task) => sum + (task.pay || 0), 0) || 0}</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
-              <p className="text-sm text-text-secondary">Lifetime earned</p>
-              <p className="mt-2 font-mono text-3xl font-bold text-success">${completedTasks?.reduce((sum, task) => sum + (task.pay || 0), 0) || 0}</p>
+              <p className="text-sm text-text-secondary">Lifetime rewards</p>
+              <p className="mt-2 font-mono text-3xl font-bold text-success">{completedTasks?.reduce((sum, task) => sum + (task.pay || 0), 0) || 0}</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
               <p className="text-sm text-text-secondary">Tasks completed</p>
@@ -136,10 +136,10 @@ export default function ParentDashboard() {
           </div>
         )}
 
-        {/* Weekly earnings chart */}
+        {/* Weekly rewards chart */}
         {auth?.profile?.linkedTeenUid && chartData.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-heading text-xl font-bold text-text-primary">Earnings over time</h2>
+            <h2 className="font-heading text-xl font-bold text-text-primary">Rewards over time</h2>
             <div className="mt-4 h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
@@ -167,7 +167,7 @@ export default function ParentDashboard() {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-semibold text-text-primary">{task.title}</p>
-                      <p className="text-sm text-text-secondary">{task.neighborName} · ${task.pay} · {task.date}</p>
+                      <p className="text-sm text-text-secondary">{task.neighborName} · Reward: {task.pay} · {task.date}</p>
                     </div>
                     <div className="text-sm font-semibold text-success">Completed</div>
                   </div>
@@ -186,7 +186,7 @@ export default function ParentDashboard() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-semibold text-text-primary">{task.title}</p>
-                    <p className="text-sm text-text-secondary">{task.neighborName} · {task.neighborAddress} · ${task.pay} · {task.startTime} – {task.endTime}</p>
+                    <p className="text-sm text-text-secondary">{task.neighborName} · {task.neighborAddress} · Reward: {task.pay} · {task.startTime} – {task.endTime}</p>
                   </div>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => handleDecision(task, true)} className="rounded-xl bg-success px-5 py-2.5 text-sm font-semibold text-white hover:bg-success/90 transition">Approve</button>

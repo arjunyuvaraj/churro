@@ -22,6 +22,7 @@ import NeighborDashboard from './views/neighbor/NeighborDashboard';
 import PostTask from './views/neighbor/PostTask';
 import BulkTaskSchedule from './views/neighbor/BulkTaskSchedule';
 import NeighborTaskDetail from './views/neighbor/NeighborTaskDetail';
+import { ConversationList, ChatView } from './views/shared/Messaging';
 
 function RequireAuth({ children }) {
   const auth = useAuth();
@@ -62,6 +63,7 @@ function RequireRole({ role, children }) {
 
 function RequireSurveyComplete({ children }) {
   const auth = useAuth();
+  const location = useLocation();
 
   if (auth?.loading) {
     return (
@@ -71,8 +73,12 @@ function RequireSurveyComplete({ children }) {
     );
   }
 
-  if (auth?.role === 'teen' && !auth?.profile?.surveyCompleted) {
+  if (auth?.role === 'teen' && !auth?.profile?.surveyCompleted && location.pathname !== '/teen/survey') {
     return <Navigate to="/teen/survey" replace />;
+  }
+
+  if (auth?.role === 'teen' && auth?.profile?.surveyCompleted && location.pathname === '/teen/survey') {
+    return <Navigate to="/teen" replace />;
   }
 
   return children;
@@ -239,6 +245,22 @@ export default function App() {
             <RequireRole role="neighbor">
               <NeighborTaskDetail />
             </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/messages"
+        element={
+          <RequireAuth>
+            <ConversationList />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/messages/:conversationId"
+        element={
+          <RequireAuth>
+            <ChatView />
           </RequireAuth>
         }
       />

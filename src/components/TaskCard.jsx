@@ -24,7 +24,7 @@ export default function TaskCard({ task, distanceText, onClick, showNeighbor = t
             <StatusBadge status={task.status} />
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-text-secondary">
-            <span className="inline-flex items-center gap-1"><Wallet size={14} />${task.pay}</span>
+            <span className="inline-flex items-center gap-1"><Wallet size={14} />Reward: {task.pay}</span>
             <span className="inline-flex items-center gap-1"><Timer size={14} />{task.startTime} - {task.endTime}</span>
             <span>{distanceText}</span>
             {showNeighbor ? <span>{task.neighborName}</span> : null}

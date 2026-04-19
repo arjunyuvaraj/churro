@@ -48,11 +48,23 @@ export default function BulkTaskSchedule() {
     }
 
     setLoading(true);
+    let coords = { lat: 37.7749, lng: -122.4194 };
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        });
+        coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      } catch (err) {
+        console.warn('Geolocation failed', err);
+      }
+    }
+
     try {
       const tasksToCreate = selectedDates.map((date) => ({
         ...formData,
         date,
-        pay: Number.parseFloat(formData.pay)
+        pay: String(formData.pay).trim()
       }));
 
       // Create all tasks sequentially
@@ -60,10 +72,10 @@ export default function BulkTaskSchedule() {
         await createTask({
           ...taskData,
           neighborUid: auth.currentUser.uid,
-          neighborName: auth.profile.fullName.split(/\s+/)[0],
+          neighborName: auth.firstName || 'Neighbor',
           neighborAddress: auth.profile.address,
-          latitude: 37.7749, // Hardcoded for MVP
-          longitude: -122.4194
+          latitude: coords.lat,
+          longitude: coords.lng
         });
       }
 
@@ -135,15 +147,13 @@ export default function BulkTaskSchedule() {
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold">Pay per task ($)</span>
+              <span className="mb-1 block text-sm font-semibold">Reward per task (Cash or Hours)</span>
               <input
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
                 value={formData.pay}
                 onChange={(e) => setFormData({ ...formData, pay: e.target.value })}
                 className="w-full rounded-xl border border-border px-4 py-3 outline-none focus:border-primary"
-                placeholder="15.00"
+                placeholder="e.g., $15 or 1 hour volunteer"
                 required
               />
             </label>
