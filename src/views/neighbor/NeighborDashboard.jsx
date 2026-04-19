@@ -1,12 +1,10 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppShell from '../../components/AppShell';
-import PageState from '../../components/PageState';
-import StatusBadge from '../../components/StatusBadge';
-import TaskCalendar from './TaskCalendar';
 import { SkeletonFeed } from '../../components/Skeleton';
 import { useAuth } from '../../lib/useAuth';
 import { useUserTasks } from '../../lib/useTask';
+import { Plus, ListTodo } from 'lucide-react';
 
 export default function NeighborDashboard() {
   const auth = useAuth();
@@ -17,161 +15,82 @@ export default function NeighborDashboard() {
     'neighbor'
   );
 
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
+  const activeCount = useMemo(() => tasks.filter(t => ['active', 'in_progress', 'pending_confirmation'].includes(t.status)).length, [tasks]);
+  const applicantCount = useMemo(() => tasks.filter(t => t.status === 'pending_neighbor_approval' || t.status === 'pending_parent_approval').length, [tasks]);
+  const completedCount = useMemo(() => tasks.filter(t => t.status === 'completed').length, [tasks]);
+  const totalSpent = useMemo(() => tasks.filter(t => t.status === 'completed').reduce((sum, t) => sum + (t.pay || 0), 0), [tasks]);
 
-  // Filter tasks for selected calendar date if in calendar mode
-  const tasksToDisplay = selectedCalendarDate
-    ? tasks.filter((t) => t.date === selectedCalendarDate)
-    : tasks;
+  if (loading) {
+    return <AppShell><SkeletonFeed count={2} /></AppShell>;
+  }
 
   return (
     <AppShell>
-      <div className="space-y-6 animate-fade-in">
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto max-w-4xl space-y-6 animate-fade-in">
+        <div className="rounded-2xl border border-border bg-card p-6 md:p-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-dark">
                 Neighbor dashboard
               </p>
               <h1 className="mt-2 font-heading text-3xl font-extrabold text-text-primary">
-                Posted tasks
+                Welcome back, {auth?.profile?.fullName?.split(' ')[0] || 'Neighbor'}
               </h1>
+              <p className="mt-2 text-text-secondary">
+                Manage your postings and track your community impact.
+              </p>
             </div>
-
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => navigate('/neighbor/bulk-schedule')}
-                className="rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold text-text-primary hover:bg-surface transition"
+                onClick={() => navigate('/neighbor/tasks')}
+                className="flex items-center gap-2 rounded-xl border border-border bg-white px-5 py-3 text-sm font-semibold text-text-primary hover:bg-surface transition"
               >
-                Bulk schedule
+                <ListTodo size={18} />
+                Manage Tasks
               </button>
-
               <button
                 type="button"
                 onClick={() => navigate('/neighbor/post-task')}
-                className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-dark transition"
+                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-dark transition"
               >
+                <Plus size={18} />
                 Post a Task
               </button>
             </div>
           </div>
+        </div>
 
-          {/* View mode tabs */}
-          <div className="mt-6 flex gap-2 border-b border-border">
-            <button
-              type="button"
-              onClick={() => {
-                setViewMode('list');
-                setSelectedCalendarDate(null);
-              }}
-              className={`px-4 py-3 text-sm font-medium transition ${
-                viewMode === 'list'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              List view
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setViewMode('calendar')}
-              className={`px-4 py-3 text-sm font-medium transition ${
-                viewMode === 'calendar'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              Calendar view
-            </button>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-text-secondary">Active tasks</p>
+            <p className="mt-2 font-mono text-4xl font-bold text-text-primary">{activeCount}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-text-secondary">Pending applicants</p>
+            <p className="mt-2 font-mono text-4xl font-bold text-amber-600">{applicantCount}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-text-secondary">Completed tasks</p>
+            <p className="mt-2 font-mono text-4xl font-bold text-success">{completedCount}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-text-secondary">Total invested</p>
+            <p className="mt-2 font-mono text-4xl font-bold text-text-primary">{totalSpent}</p>
           </div>
         </div>
 
-
-        {/* Empty state*/}
-        {loading && !tasksToDisplay.length && (
-          <PageState
-            title="No tasks yet"
-            description="Post your first task to get started."
-          />
-        )}
-
-        {/* Calendar view */}
-        {viewMode === 'calendar' && !loading && (
-          <div>
-            <TaskCalendar
-              tasks={tasks}
-              onDateSelect={setSelectedCalendarDate}
-            />
-
-            {selectedCalendarDate && (
-              <div className="mt-4 rounded-2xl border border-border bg-card p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="font-semibold text-text-primary">
-                    Tasks on {selectedCalendarDate}
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCalendarDate(null)}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Clear filter
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* List view */}
-        {viewMode === 'list' && !loading && (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {tasksToDisplay.length > 0 ? (
-              tasksToDisplay.map((task) => (
-                <button
-                  key={task.id}
-                  type="button"
-                  onClick={() =>
-                    navigate(`/neighbor/task/${task.id}`)
-                  }
-                  className="rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-soft card-hover"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="font-heading text-xl font-bold text-text-primary">
-                        {task.title}
-                      </h2>
-                      <p className="mt-1 text-sm text-text-secondary">
-                        {task.date} · Reward: {task.pay}
-                      </p>
-                    </div>
-                    <StatusBadge status={task.status} />
-                  </div>
-
-                  <p className="mt-3 text-sm text-text-secondary line-clamp-2">
-                    {task.description}
-                  </p>
-                </button>
-              ))
-            ) : (
-              <div className="col-span-full">
-                <PageState
-                  title={
-                    selectedCalendarDate
-                      ? 'No tasks on this date'
-                      : 'No tasks yet'
-                  }
-                  description={
-                    selectedCalendarDate
-                      ? 'Select a different date or create a new task.'
-                      : 'Post your first task to get started.'
-                  }
-                />
-              </div>
-            )}
+        {tasks.length > 0 && (
+          <div className="rounded-2xl border border-border bg-white p-6 md:p-8 shadow-sm text-center">
+            <h2 className="font-heading text-xl font-bold text-text-primary">Want to see all your tasks?</h2>
+            <p className="mt-2 text-text-secondary">Head over to the Tasks tab to manage approvals, track in-progress jobs, and review past work.</p>
+            <button
+              type="button"
+              onClick={() => navigate('/neighbor/tasks')}
+              className="mt-6 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition shadow-md"
+            >
+              Go to Tasks
+            </button>
           </div>
         )}
       </div>

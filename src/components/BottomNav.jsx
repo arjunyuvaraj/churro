@@ -4,18 +4,24 @@ import { NavLink } from 'react-router-dom';
 const items = {
   teen: [
     { to: '/teen', label: 'Browse', icon: Home },
-    { to: '/teen/active', label: 'My Tasks', icon: BriefcaseBusiness },
-    { to: '/teen/earnings', label: 'Rewards', icon: LayoutDashboard },
+    { to: '/teen/tasks', label: 'Tasks', icon: BriefcaseBusiness },
+    { to: '/teen/earnings', label: 'Earnings', icon: LayoutDashboard },
+    { to: '/teen/notifications', label: 'Alerts', icon: Bell },
     { to: '/teen/profile', label: 'Profile', icon: User }
   ],
   parent: [
-    { to: '/parent', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/parent', label: 'Home', icon: Home },
+    { to: '/parent/approvals', label: 'Approve', icon: BriefcaseBusiness },
+    { to: '/parent/earnings', label: 'Earnings', icon: LayoutDashboard },
     { to: '/parent/notifications', label: 'Alerts', icon: Bell },
     { to: '/parent/settings', label: 'Settings', icon: User }
   ],
   neighbor: [
-    { to: '/neighbor', label: 'Dashboard', icon: Home },
-    { to: '/neighbor/post-task', label: 'Post', icon: BriefcaseBusiness }
+    { to: '/neighbor', label: 'Home', icon: Home },
+    { to: '/neighbor/post-task', label: 'Post', icon: BriefcaseBusiness },
+    { to: '/neighbor/tasks', label: 'Active', icon: LayoutDashboard },
+    { to: '/neighbor/notifications', label: 'Alerts', icon: Bell },
+    { to: '/neighbor/profile', label: 'Profile', icon: User }
   ]
 };
 

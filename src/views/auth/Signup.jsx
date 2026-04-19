@@ -149,12 +149,13 @@ export default function Signup() {
     setLoading(true);
     setError('');
     try {
-      const result = await auth.loginWithGoogle();
+      const result = await auth.signupWithGoogle();
       if (result.isNewUser) {
         setGoogleSignupMode(true);
-        // Stay on details step — they already picked a role and now just need role-specific fields
+        // user stays here to finish the form, then it finishes via auth.completeGoogleSignup
       }
-      // Existing users will be redirected by the useEffect
+      // If result.isNewUser is false, they have an existing profile.
+      // The useEffect at the top of the component will automatically redirect them to their dashboard.
     } catch (currentError) {
       setError(getReadableAuthError(currentError));
     } finally {

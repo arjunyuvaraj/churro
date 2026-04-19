@@ -1,145 +1,108 @@
-import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { useState } from 'react';
 import AppShell from '../../components/AppShell';
 import PageState from '../../components/PageState';
-import { db } from '../../lib/firebase';
+import { useNotifications } from '../../lib/useNotifications';
 import { useAuth } from '../../lib/useAuth';
-
-function toDate(value) {
-  return value?.toDate?.() ? value.toDate() : null;
-}
+import { Bell } from 'lucide-react';
 
 export default function ParentNotifications() {
   const auth = useAuth();
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [actingId, setActingId] = useState('');
-  const [error, setError] = useState('');
+  const { notifications, unreadCount } = useNotifications();
+  const pendingInvitations = auth?.pendingInvitations || [];
+  const [invitationLoading, setInvitationLoading] = useState(null);
+  const [invitationError, setInvitationError] = useState('');
 
-  const parentEmail = (auth?.profile?.email || auth?.currentUser?.email || '').trim().toLowerCase();
-
-  useEffect(() => {
-    if (!db || !parentEmail) {
-      setRequests([]);
-      setLoading(false);
-      return () => {};
-    }
-
-    setLoading(true);
-    const requestsQuery = query(
-      collection(db, 'invitations'),
-      where('parentEmail', '==', parentEmail),
-      where('status', '==', 'pending')
-    );
-
-    const unsubscribe = onSnapshot(
-      requestsQuery,
-      (snapshot) => {
-        const mapped = snapshot.docs
-          .map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() }))
-          .sort((a, b) => {
-            const left = toDate(a.resentAt) || toDate(a.updatedAt) || toDate(a.createdAt) || new Date(0);
-            const right = toDate(b.resentAt) || toDate(b.updatedAt) || toDate(b.createdAt) || new Date(0);
-            return right.getTime() - left.getTime();
-          });
-        setRequests(mapped);
-        setLoading(false);
-      },
-      () => {
-        setError('Unable to load parent requests right now.');
-        setLoading(false);
-      }
-    );
-
-    return unsubscribe;
-  }, [parentEmail]);
-
-  async function handleAccept(invitationId) {
-    setError('');
-    setActingId(invitationId);
+  async function handleAcceptInvitation(invitationId) {
+    setInvitationLoading(invitationId);
+    setInvitationError('');
     try {
       await auth.acceptParentInvitationById(invitationId);
-    } catch (nextError) {
-      setError(nextError?.message || 'Unable to accept this request.');
+    } catch (err) {
+      setInvitationError(err.message || 'Unable to accept invitation.');
     } finally {
-      setActingId('');
+      setInvitationLoading(null);
     }
   }
 
-  async function handleDecline(invitationId) {
-    setError('');
-    setActingId(invitationId);
+  async function handleDeclineInvitation(invitationId) {
+    setInvitationLoading(invitationId);
+    setInvitationError('');
     try {
       await auth.declineParentInvitationById(invitationId);
-    } catch (nextError) {
-      setError(nextError?.message || 'Unable to decline this request.');
+    } catch (err) {
+      setInvitationError(err.message || 'Unable to decline invitation.');
     } finally {
-      setActingId('');
+      setInvitationLoading(null);
     }
   }
 
   return (
     <AppShell>
-      <div className="space-y-6 animate-fade-in">
-        <section className="rounded-2xl border border-border bg-card p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-dark">Parent notifications</p>
-          <h1 className="mt-2 font-heading text-3xl font-extrabold text-text-primary">Teen verification requests</h1>
-          <p className="mt-2 text-text-secondary">Approve requests here to verify a teen account and connect it to your parent dashboard.</p>
-        </section>
-
-        {error ? (
-          <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
-        ) : null}
-
-        <section className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="font-heading text-xl font-bold text-text-primary">Pending requests</h2>
-          <div className="mt-4 space-y-3">
-            {loading ? (
-              <PageState title="Loading requests" description="Checking recent teen verification requests." />
-            ) : null}
-
-            {!loading && requests.length === 0 ? (
-              <PageState title="No pending requests" description="When a teen asks to connect, the request appears here." />
-            ) : null}
-
-            {!loading && requests.length > 0 ? requests.map((request) => {
-              const requestedAt = toDate(request.resentAt) || toDate(request.updatedAt) || toDate(request.createdAt);
-              const requestedLabel = requestedAt ? requestedAt.toLocaleString() : 'Just now';
-              const resendCount = Number(request.resendCount || 0);
-
-              return (
-                <div key={request.id} className="rounded-xl border border-border bg-surface p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="font-semibold text-text-primary">{request.teenName || 'Teen account'} wants to connect</p>
-                      <p className="text-sm text-text-secondary">Teen UID: {request.teenUid}</p>
-                      <p className="text-sm text-text-secondary">Requested: {requestedLabel}</p>
-                      {resendCount > 0 ? <p className="text-sm text-text-secondary">Resent {resendCount} time{resendCount === 1 ? '' : 's'}</p> : null}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleAccept(request.id)}
-                        disabled={actingId === request.id}
-                        className="rounded-xl bg-success px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-success/90 disabled:opacity-60"
-                      >
-                        {actingId === request.id ? 'Saving...' : 'Accept'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDecline(request.id)}
-                        disabled={actingId === request.id}
-                        className="rounded-xl bg-danger px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-danger/90 disabled:opacity-60"
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            }) : null}
+      <div className="mx-auto max-w-3xl space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-dark">Alerts</p>
+            <h1 className="mt-2 font-heading text-3xl font-extrabold">Notifications</h1>
           </div>
-        </section>
+          {unreadCount > 0 && (
+            <div className="flex h-8 items-center rounded-full bg-red-100 px-3 text-sm font-semibold text-red-700">
+              {unreadCount} unread
+            </div>
+          )}
+        </div>
+
+        {invitationError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {invitationError}
+          </div>
+        )}
+
+        {pendingInvitations.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="font-heading text-xl font-bold">Action Required</h2>
+            {pendingInvitations.map((inv) => (
+              <div key={inv.id} className="flex flex-col gap-4 rounded-2xl border border-orange-200 bg-orange-50 p-6 sm:flex-row sm:items-center sm:justify-between shadow-sm">
+                <div>
+                  <p className="font-semibold text-slate-900">{inv.teenName || 'A teen'} has invited you</p>
+                  <p className="mt-1 text-sm text-slate-600">Accept to link accounts and start reviewing their tasks.</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button type="button" onClick={() => handleAcceptInvitation(inv.id)} disabled={invitationLoading === inv.id} className="rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">
+                    {invitationLoading === inv.id ? 'Linking...' : 'Accept Link'}
+                  </button>
+                  <button type="button" onClick={() => handleDeclineInvitation(inv.id)} disabled={invitationLoading === inv.id} className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
+          {notifications.length === 0 ? (
+            <div className="p-8">
+              <PageState title="You're all caught up" description="Updates across your teen's tasks will appear here." />
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {notifications.map((notif) => (
+                <li key={notif.id} className={`flex gap-4 p-5 transition hover:bg-surface ${!notif.read ? 'bg-primary-light/10' : ''}`}>
+                  <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${!notif.read ? 'bg-primary-light text-primary' : 'bg-slate-100 text-slate-500'}`}>
+                    <Bell size={20} />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${!notif.read ? 'font-bold' : 'font-medium'}`}>{notif.title}</p>
+                    <p className="mt-1 text-sm text-text-secondary">{notif.message}</p>
+                    <p className="mt-2 text-xs text-slate-400">
+                      {notif.createdAt?.seconds ? new Date(notif.createdAt.seconds * 1000).toLocaleString() : 'Just now'}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </AppShell>
   );

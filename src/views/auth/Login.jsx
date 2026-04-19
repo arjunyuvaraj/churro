@@ -6,6 +6,8 @@ import { useAuth } from '../../lib/useAuth';
 export default function Login() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const inviteToken = new URLSearchParams(location.search).get('inviteToken');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,13 +21,13 @@ export default function Login() {
   useEffect(() => {
     if (auth?.loading) return;
 
-    // Google user with no profile — send to signup to pick a role
-    if (auth?.currentUser && auth?.needsProfileSetup) {
-      navigate('/signup', { state: { fromGoogle: true }, replace: true });
+    if (!auth?.isAuthenticated || !auth?.role) {
+      // Google user with no profile — send to signup to pick a role
+      if (auth?.currentUser && auth?.needsProfileSetup) {
+        navigate('/signup', { state: { fromGoogle: true }, replace: true });
+      }
       return;
     }
-
-    if (!auth?.isAuthenticated || !auth?.role) return;
 
     // Parent with pending invite token — send to accept flow
     if (inviteToken && auth.role === 'parent') {
@@ -60,10 +62,7 @@ export default function Login() {
     setError('');
 
     try {
-      const result = await auth.loginWithGoogle();
-      if (result.isNewUser) {
-        navigate('/signup', { state: { fromGoogle: true }, replace: true });
-      }
+      await auth.loginWithGoogle();
       // Existing users will be redirected by the useEffect above once profile loads
     } catch (currentError) {
       setError(getReadableAuthError(currentError));

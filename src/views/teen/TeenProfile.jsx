@@ -42,11 +42,46 @@ export default function TeenProfile() {
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-white p-6">
-          <h2 className="font-heading text-xl font-bold">Bio</h2>
-          <textarea value={bio} onChange={(event) => setBio(event.target.value)} rows={4} className="mt-3 w-full rounded-xl border border-border px-4 py-3 outline-none focus:border-primary" placeholder="Write a short bio" />
+          <h2 className="font-heading text-xl font-bold">Bio & About Me</h2>
+          <textarea value={bio} onChange={(event) => setBio(event.target.value)} rows={4} className="mt-3 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" placeholder="Write a short bio to introduce yourself to neighbors" />
           <button type="button" onClick={saveBio} disabled={saving} className="mt-4 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white">
             {saving ? 'Saving...' : 'Save bio'}
           </button>
+        </div>
+        <div className="rounded-2xl border border-border bg-white p-6">
+          <h2 className="font-heading text-xl font-bold">Recent Reviews</h2>
+          <div className="mt-4 space-y-4">
+            <div className="rounded-xl border border-border p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold">Bob Smith</p>
+                <RatingStars value={5} size="sm" />
+              </div>
+              <p className="mt-2 text-sm text-text-secondary">Did a great job mowing the lawn! Was on time and very respectful.</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-border bg-white p-6">
+          <h2 className="font-heading text-xl font-bold">Settings & Privacy</h2>
+          <div className="mt-4 space-y-4">
+            <div className="flex cursor-pointer items-center justify-between rounded-xl border border-border p-4 transition hover:border-primary">
+              <div>
+                <p className="font-semibold">Location Tracking</p>
+                <p className="text-sm text-text-secondary">Allow parent to see your live location during active tasks.</p>
+              </div>
+              <div className="h-6 w-11 rounded-full bg-slate-200 shadow-inner">
+                <div className="h-6 w-6 rounded-full border border-border bg-white shadow-sm" />
+              </div>
+            </div>
+            <div className="flex cursor-pointer items-center justify-between rounded-xl border border-border p-4 transition hover:border-primary">
+              <div>
+                <p className="font-semibold">Public Profile</p>
+                <p className="text-sm text-text-secondary">Allow neighbors to search for you by name.</p>
+              </div>
+              <div className="h-6 w-11 rounded-full bg-primary shadow-inner">
+                <div className="h-6 w-6 translate-x-5 rounded-full border border-border bg-white shadow-sm" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </AppShell>

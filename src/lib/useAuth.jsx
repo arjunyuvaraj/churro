@@ -71,19 +71,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [pendingInvitations, setPendingInvitations] = useState([]);
 
-  // Main auth + profile listener
+  // ─── Auth + profile listener ────────────────────────────────────────
   useEffect(() => {
     if (!firebaseReady) {
       setLoading(false);
       return undefined;
     }
 
-    let unsubscribeProfile = () => { };
+    let unsubProfile = () => { };
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      setLoading(true);
+    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      unsubProfile();
       setCurrentUser(firebaseUser);
-      unsubscribeProfile();
 
       if (!firebaseUser || !db) {
         setProfile(null);
@@ -91,54 +90,60 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      setLoading(true);
-
+      // Listen for the Firestore profile in real time.
+      // IMPORTANT: we do NOT sign-out here when the doc is missing, because
+      // during a signup flow the profile hasn't been written yet and we must
+      // keep the auth session alive until completeGoogleSignup / signup finishes.
       const userRef = doc(db, 'users', firebaseUser.uid);
-      unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
-        const profileData = snapshot.exists() ? snapshot.data() : null;
+      unsubProfile = onSnapshot(
+        userRef,
+        (snapshot) => {
+          let profileData = snapshot.exists() ? snapshot.data() : null;
 
-        // Backfill legacy records where accountType exists but role was not written.
-        if (profileData && !profileData.role && profileData.accountType) {
-          setDoc(userRef, { role: profileData.accountType }, { merge: true }).catch(() => { });
-          setProfile({ ...profileData, role: profileData.accountType });
+          // Backfill legacy records where accountType exists but role was not set.
+          if (profileData && !profileData.role && profileData.accountType) {
+            setDoc(userRef, { role: profileData.accountType }, { merge: true }).catch(() => { });
+            profileData = { ...profileData, role: profileData.accountType };
+          }
+
+          setProfile(profileData);
           setLoading(false);
-          return;
+        },
+        () => {
+          // Firestore read failed – still resolve so the app isn't stuck.
+          setProfile(null);
+          setLoading(false);
         }
-
-        setProfile(profileData);
-        setLoading(false);
-      }, () => {
-        // Keep login usable even if profile read fails.
-        setLoading(false);
-      });
+      );
     });
 
     return () => {
-      unsubscribeProfile();
-      unsubscribeAuth();
+      unsubProfile();
+      unsubAuth();
     };
   }, []);
 
-  // Real-time listener for pending invitations (parent accounts)
+  // ─── Pending-invitations listener (parent accounts) ─────────────────
   useEffect(() => {
     if (!firebaseReady || !db || !profile?.email || profile?.role !== 'parent') {
       setPendingInvitations([]);
       return undefined;
     }
 
-    const invitationsQuery = query(
+    const q = query(
       collection(db, 'invitations'),
       where('parentEmail', '==', normalizeEmail(profile.email)),
       where('status', '==', 'pending')
     );
 
-    return onSnapshot(invitationsQuery, (snapshot) => {
-      setPendingInvitations(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    return onSnapshot(q, (snap) => {
+      setPendingInvitations(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     }, () => {
       setPendingInvitations([]);
     });
   }, [profile?.email, profile?.role]);
 
+  // ─── Email / password sign-up ────────────────────────────────────────
   async function signup({ email, password, fullName, role, dateOfBirth, address, parentEmail }) {
     if (!firebaseReady) throw new Error('Firebase is not configured. Set VITE_ env variables first.');
 
@@ -159,48 +164,53 @@ export function AuthProvider({ children }) {
     });
 
     if (role === 'teen') {
-      const invitationRef = await addDoc(collection(db, 'invitations'), {
-        teenUid: uid,
-        teenName: trimmedFullName,
-        parentEmail: normalizedParentEmail,
-        token: createInvitationToken(),
-        status: 'pending',
-        parentUid: null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        resentAt: null,
-        resendCount: 0,
-        acceptedAt: null,
-        respondedAt: null
-      });
-
-      await setDoc(userRef, {
-        parentInvitationId: invitationRef.id,
-        parentInvitationStatus: 'pending'
-      }, { merge: true });
+      await createTeenInvitation(uid, trimmedFullName, normalizedParentEmail, userRef);
     }
 
     return credential.user;
   }
 
+  // ─── Google login (for the LOGIN page) ───────────────────────────────
+  // Returns the Firebase user if an account already exists.
+  // If the Google account has NO Firestore profile, signs the user out
+  // and throws so the Login page can show an error with a link to sign-up.
   async function loginWithGoogle() {
     if (!firebaseReady) throw new Error('Firebase is not configured.');
 
     const result = await signInWithPopup(auth, googleProvider);
-    const uid = result.user.uid;
+    const snap = await getDoc(doc(db, 'users', result.user.uid));
 
-    // Check if user already exists in Firestore
-    const userDoc = await getDoc(doc(db, 'users', uid));
-    if (userDoc.exists()) {
+    if (snap.exists()) {
       return { user: result.user, isNewUser: false };
     }
 
-    // New user — they need to complete profile setup
+    // No profile → wrong page. Sign out so the user doesn't get stuck.
+    await signOut(auth);
+    throw new Error('No account found for this Google account. Please sign up first.');
+  }
+
+  // ─── Google signup (for the SIGNUP page) ─────────────────────────────
+  // Opens the Google popup. Returns { user, isNewUser }.
+  // Does NOT sign-out when profile is missing – the Signup page will
+  // collect the remaining fields and call completeGoogleSignup.
+  async function signupWithGoogle() {
+    if (!firebaseReady) throw new Error('Firebase is not configured.');
+
+    const result = await signInWithPopup(auth, googleProvider);
+    const snap = await getDoc(doc(db, 'users', result.user.uid));
+
+    if (snap.exists()) {
+      // Already has a profile → they're an existing user.
+      return { user: result.user, isNewUser: false };
+    }
+
+    // New user – keep them signed-in so completeGoogleSignup works.
     return { user: result.user, isNewUser: true };
   }
 
+  // ─── Finish Google signup after role + fields are collected ──────────
   async function completeGoogleSignup({ role, dateOfBirth, address, parentEmail }) {
-    if (!currentUser) throw new Error('No Google sign in process active.');
+    if (!currentUser) throw new Error('No Google sign-in process active.');
 
     validateRequiredSignupInput({
       email: currentUser.email,
@@ -225,30 +235,13 @@ export function AuthProvider({ children }) {
     });
 
     if (role === 'teen') {
-      const invitationRef = await addDoc(collection(db, 'invitations'), {
-        teenUid: currentUser.uid,
-        teenName: trimmedName,
-        parentEmail: normalizedParentEmail,
-        token: createInvitationToken(),
-        status: 'pending',
-        parentUid: null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        resentAt: null,
-        resendCount: 0,
-        acceptedAt: null,
-        respondedAt: null
-      });
-
-      await setDoc(userRef, {
-        parentInvitationId: invitationRef.id,
-        parentInvitationStatus: 'pending'
-      }, { merge: true });
+      await createTeenInvitation(currentUser.uid, trimmedName, normalizedParentEmail, userRef);
     }
 
     return currentUser;
   }
 
+  // ─── Email / password login ──────────────────────────────────────────
   async function login(email, password) {
     if (!firebaseReady) throw new Error('Firebase is not configured.');
     if (!email?.trim() || !password?.trim()) {
@@ -257,18 +250,19 @@ export function AuthProvider({ children }) {
     return signInWithEmailAndPassword(auth, normalizeEmail(email), password);
   }
 
+  // ─── Password reset ─────────────────────────────────────────────────
   async function passwordReset(email) {
     if (!firebaseReady) throw new Error('Firebase is not configured.');
     if (!email?.trim()) throw new Error('Please enter your email address.');
     await sendPasswordResetEmail(auth, normalizeEmail(email));
   }
 
+  // ─── Parent onboarding ──────────────────────────────────────────────
   async function completeParentOnboarding(prefs = {}) {
     if (!firebaseReady || !currentUser) throw new Error('Not authenticated.');
     if (profile?.role !== 'parent') throw new Error('Only parent accounts can complete onboarding.');
 
-    const userRef = doc(db, 'users', currentUser.uid);
-    await setDoc(userRef, {
+    await setDoc(doc(db, 'users', currentUser.uid), {
       teenRadiusLimit: prefs.teenRadiusLimit ?? 1,
       approvedCategories: prefs.approvedCategories ?? [],
       weeklyEarningsCap: prefs.weeklyEarningsCap ?? null,
@@ -278,6 +272,7 @@ export function AuthProvider({ children }) {
     }, { merge: true });
   }
 
+  // ─── Invitation management ──────────────────────────────────────────
   async function acceptParentInvitation(token) {
     if (!firebaseReady) throw new Error('Firebase is not configured.');
     if (!currentUser) throw new Error('Please sign in first.');
@@ -289,68 +284,55 @@ export function AuthProvider({ children }) {
     }
 
     const parentEmail = normalizeEmail(currentUser.email);
-    const invitationsQuery = query(
+    const q = query(
       collection(db, 'invitations'),
       where('token', '==', token.trim().toUpperCase()),
       limit(1)
     );
-    const invitationsSnapshot = await getDocs(invitationsQuery);
-    if (invitationsSnapshot.empty) {
-      throw new Error('Invitation not found.');
-    }
+    const snap = await getDocs(q);
+    if (snap.empty) throw new Error('Invitation not found.');
 
-    const invitationDoc = invitationsSnapshot.docs[0];
-    const invitation = invitationDoc.data();
-    if (normalizeEmail(invitation.parentEmail) !== parentEmail) {
+    const invDoc = snap.docs[0];
+    const inv = invDoc.data();
+    if (normalizeEmail(inv.parentEmail) !== parentEmail) {
       throw new Error('This invitation does not match your email.');
     }
 
-    return acceptParentInvitationById(invitationDoc.id);
+    return acceptParentInvitationById(invDoc.id);
   }
 
   async function acceptParentInvitationById(invitationId) {
     if (!firebaseReady) throw new Error('Firebase is not configured.');
     if (!currentUser) throw new Error('Please sign in first.');
 
-    const invitationRef = doc(db, 'invitations', invitationId);
-    const invitationSnapshot = await getDoc(invitationRef);
-    if (!invitationSnapshot.exists()) {
-      throw new Error('Invitation not found.');
-    }
-    const invitation = invitationSnapshot.data();
-    if (invitation.status !== 'pending') {
-      throw new Error('This invitation is no longer pending.');
-    }
-    if (normalizeEmail(invitation.parentEmail) !== normalizeEmail(currentUser.email)) {
+    const invRef = doc(db, 'invitations', invitationId);
+    const invSnap = await getDoc(invRef);
+    if (!invSnap.exists()) throw new Error('Invitation not found.');
+    const inv = invSnap.data();
+    if (inv.status !== 'pending') throw new Error('This invitation is no longer pending.');
+    if (normalizeEmail(inv.parentEmail) !== normalizeEmail(currentUser.email)) {
       throw new Error('This invitation does not match your email.');
     }
 
     const parentRef = doc(db, 'users', currentUser.uid);
-    const teenRef = doc(db, 'users', invitation.teenUid);
+    const teenRef = doc(db, 'users', inv.teenUid);
 
-    await runTransaction(db, async (transaction) => {
-      const [parentSnapshot, teenSnapshot, latestInvitationSnapshot] = await Promise.all([
-        transaction.get(parentRef),
-        transaction.get(teenRef),
-        transaction.get(invitationRef)
+    await runTransaction(db, async (tx) => {
+      const [pSnap, tSnap, iSnap] = await Promise.all([
+        tx.get(parentRef), tx.get(teenRef), tx.get(invRef)
       ]);
-
-      if (!parentSnapshot.exists() || !teenSnapshot.exists() || !latestInvitationSnapshot.exists()) {
+      if (!pSnap.exists() || !tSnap.exists() || !iSnap.exists()) {
         throw new Error('Unable to complete invitation acceptance.');
       }
+      if (iSnap.data().status !== 'pending') throw new Error('Already processed.');
 
-      const latestInvitation = latestInvitationSnapshot.data();
-      if (latestInvitation.status !== 'pending') {
-        throw new Error('This invitation has already been processed.');
-      }
-
-      transaction.update(parentRef, { linkedTeenUid: invitation.teenUid });
-      transaction.update(teenRef, {
+      tx.update(parentRef, { linkedTeenUid: inv.teenUid });
+      tx.update(teenRef, {
         linkedParentUid: currentUser.uid,
         parentApproved: true,
         parentInvitationStatus: 'accepted'
       });
-      transaction.update(invitationRef, {
+      tx.update(invRef, {
         status: 'accepted',
         parentUid: currentUser.uid,
         acceptedAt: serverTimestamp(),
@@ -359,34 +341,28 @@ export function AuthProvider({ children }) {
       });
     });
 
-    return { invitationId, teenUid: invitation.teenUid };
+    return { invitationId, teenUid: inv.teenUid };
   }
 
   async function declineParentInvitationById(invitationId) {
     if (!firebaseReady) throw new Error('Firebase is not configured.');
     if (!currentUser) throw new Error('Please sign in first.');
 
-    const invitationRef = doc(db, 'invitations', invitationId);
-    const invitationSnapshot = await getDoc(invitationRef);
-    if (!invitationSnapshot.exists()) {
-      throw new Error('Invitation not found.');
-    }
-    const invitation = invitationSnapshot.data();
-    if (invitation.status !== 'pending') {
-      throw new Error('This invitation is no longer pending.');
-    }
-    if (normalizeEmail(invitation.parentEmail) !== normalizeEmail(currentUser.email)) {
+    const invRef = doc(db, 'invitations', invitationId);
+    const invSnap = await getDoc(invRef);
+    if (!invSnap.exists()) throw new Error('Invitation not found.');
+    const inv = invSnap.data();
+    if (inv.status !== 'pending') throw new Error('This invitation is no longer pending.');
+    if (normalizeEmail(inv.parentEmail) !== normalizeEmail(currentUser.email)) {
       throw new Error('This invitation does not match your email.');
     }
 
-    await updateDoc(invitationRef, {
+    await updateDoc(invRef, {
       status: 'declined',
       parentUid: currentUser.uid,
-      acceptedAt: null,
       respondedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-
     return true;
   }
 
@@ -397,29 +373,28 @@ export function AuthProvider({ children }) {
     }
 
     const normalizedParentEmail = normalizeEmail(profile?.parentEmail);
-    if (!normalizedParentEmail) {
-      throw new Error('Missing parent email on teen profile.');
-    }
+    if (!normalizedParentEmail) throw new Error('Missing parent email on teen profile.');
 
-    const invitationsQuery = query(
+    const q = query(
       collection(db, 'invitations'),
       where('teenUid', '==', currentUser.uid),
       where('status', '==', 'pending'),
       limit(1)
     );
+    const snap = await getDocs(q);
 
-    const invitationSnapshot = await getDocs(invitationsQuery);
-    if (!invitationSnapshot.empty) {
-      const pendingRef = doc(db, 'invitations', invitationSnapshot.docs[0].id);
+    if (!snap.empty) {
+      const pendingRef = doc(db, 'invitations', snap.docs[0].id);
       await updateDoc(pendingRef, {
         resentAt: serverTimestamp(),
         resendCount: increment(1),
         updatedAt: serverTimestamp()
       });
-      return invitationSnapshot.docs[0].id;
+      return snap.docs[0].id;
     }
 
-    const invitationRef = await addDoc(collection(db, 'invitations'), {
+    const userRef = doc(db, 'users', currentUser.uid);
+    const invRef = await addDoc(collection(db, 'invitations'), {
       teenUid: currentUser.uid,
       teenName: profile?.fullName?.trim() || 'Teen',
       parentEmail: normalizedParentEmail,
@@ -434,44 +409,44 @@ export function AuthProvider({ children }) {
       respondedAt: null
     });
 
-    await setDoc(doc(db, 'users', currentUser.uid), {
-      parentInvitationId: invitationRef.id,
+    await setDoc(userRef, {
+      parentInvitationId: invRef.id,
       parentInvitationStatus: 'pending'
     }, { merge: true });
 
-    return invitationRef.id;
+    return invRef.id;
   }
 
+  // ─── Logout ──────────────────────────────────────────────────────────
   async function logout() {
     if (!firebaseReady) return;
     await signOut(auth);
   }
 
+  // ─── Teen skills ────────────────────────────────────────────────────
   async function updateTeenSkills(skillIds) {
-    if (!firebaseReady || !currentUser) throw new Error('Firebase is not configured or user not authenticated.');
+    if (!firebaseReady || !currentUser) throw new Error('Not configured or not authenticated.');
 
     const approvedCategories = getApprovedCategoriesFromSkills(skillIds);
-    const interests = skillIds.map((id) => id.replace(/^[a-z_]+_/, '').replace(/_/g, ' ')).map((s) => s.charAt(0).toUpperCase() + s.slice(1));
+    const interests = skillIds
+      .map((id) => id.replace(/^[a-z_]+_/, '').replace(/_/g, ' '))
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1));
 
-    const userRef = doc(db, 'users', currentUser.uid);
-    await setDoc(
-      userRef,
-      {
-        skills: skillIds,
-        interests,
-        approvedCategories,
-        surveyCompleted: true,
-        surveyCompletedAt: serverTimestamp()
-      },
-      { merge: true }
-    );
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      skills: skillIds,
+      interests,
+      approvedCategories,
+      surveyCompleted: true,
+      surveyCompletedAt: serverTimestamp()
+    }, { merge: true });
 
     return profile;
   }
 
-  // Derived state booleans
+  // ─── Derived state ──────────────────────────────────────────────────
   const role = profile?.role || null;
   const hasProfile = Boolean(profile && role);
+  const isAuthenticated = Boolean(currentUser && hasProfile);
   const needsProfileSetup = Boolean(currentUser && !hasProfile);
   const needsOnboarding = role === 'parent' && !profile?.onboardingComplete;
 
@@ -483,6 +458,7 @@ export function AuthProvider({ children }) {
       signup,
       login,
       loginWithGoogle,
+      signupWithGoogle,
       completeGoogleSignup,
       logout,
       passwordReset,
@@ -493,15 +469,14 @@ export function AuthProvider({ children }) {
       declineParentInvitationById,
       resendParentInvitationRequest,
       pendingInvitations,
-      // Only authenticated when we have both a Firebase user AND a Firestore profile with a role
-      isAuthenticated: Boolean(currentUser && hasProfile),
+      isAuthenticated,
       needsProfileSetup,
       needsOnboarding,
       role,
       accountType: profile?.accountType || role,
       firstName: profile?.fullName ? getFirstName(profile.fullName) : ''
     }),
-    [currentUser, profile, loading, pendingInvitations, hasProfile, needsProfileSetup, needsOnboarding, role]
+    [currentUser, profile, loading, pendingInvitations, isAuthenticated, needsProfileSetup, needsOnboarding, role]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -509,6 +484,29 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   return useContext(AuthContext);
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────
+
+async function createTeenInvitation(uid, teenName, parentEmail, userRef) {
+  const invRef = await addDoc(collection(db, 'invitations'), {
+    teenUid: uid,
+    teenName,
+    parentEmail,
+    token: createInvitationToken(),
+    status: 'pending',
+    parentUid: null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    resentAt: null,
+    resendCount: 0,
+    acceptedAt: null,
+    respondedAt: null
+  });
+  await setDoc(userRef, {
+    parentInvitationId: invRef.id,
+    parentInvitationStatus: 'pending'
+  }, { merge: true });
 }
 
 function getBaseProfile(uid, email, fullName, role) {
@@ -524,18 +522,12 @@ function getBaseProfile(uid, email, fullName, role) {
 }
 
 function getExtraProfile(role, dateOfBirth, address, parentEmail) {
-  const isTeen = role === 'teen';
-  const isParent = role === 'parent';
-
-  if (isTeen) {
+  if (role === 'teen') {
     const defaultDate = dateOfBirth ? new Date(dateOfBirth) : new Date();
     const now = new Date();
     let age = now.getFullYear() - defaultDate.getFullYear();
-    const monthDiff = now.getMonth() - defaultDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < defaultDate.getDate())) {
-      age--;
-    }
-
+    const m = now.getMonth() - defaultDate.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < defaultDate.getDate())) age--;
     return {
       dateOfBirth: defaultDate.toISOString().split('T')[0],
       age: Math.max(13, isNaN(age) ? 14 : age),
@@ -552,7 +544,7 @@ function getExtraProfile(role, dateOfBirth, address, parentEmail) {
     };
   }
 
-  if (isParent) {
+  if (role === 'parent') {
     return {
       linkedTeenUid: null,
       teenRadiusLimit: 1,

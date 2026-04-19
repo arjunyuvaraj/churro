@@ -14,10 +14,13 @@ import Terms from './views/public/Terms';
 import SkillsSurvey from './views/teen/SkillsSurvey';
 import TeenDashboard from './views/teen/TeenDashboard';
 import TaskDetail from './views/teen/TaskDetail';
-import ActiveTask from './views/teen/ActiveTask';
+import MyTasks from './views/teen/MyTasks';
 import Earnings from './views/teen/Earnings';
+import TeenNotifications from './views/teen/TeenNotifications';
 import TeenProfile from './views/teen/TeenProfile';
 import ParentDashboard from './views/parent/ParentDashboard';
+import ParentApprovals from './views/parent/ParentApprovals';
+import ParentEarnings from './views/parent/ParentEarnings';
 import ParentNotifications from './views/parent/ParentNotifications';
 import ParentSettings from './views/parent/ParentSettings';
 import ParentOnboarding from './views/parent/ParentOnboarding';
@@ -25,6 +28,9 @@ import TaskDetailReadOnly from './views/parent/TaskDetailReadOnly';
 import NeighborDashboard from './views/neighbor/NeighborDashboard';
 import PostTask from './views/neighbor/PostTask';
 import BulkTaskSchedule from './views/neighbor/BulkTaskSchedule';
+import NeighborTasks from './views/neighbor/NeighborTasks';
+import NeighborNotifications from './views/neighbor/NeighborNotifications';
+import NeighborProfile from './views/neighbor/NeighborProfile';
 import NeighborTaskDetail from './views/neighbor/NeighborTaskDetail';
 import { ConversationList, ChatView } from './views/shared/Messaging';
 
@@ -38,11 +44,6 @@ function RequireAuth({ children }) {
         <PageState title="Loading Churro" description="Syncing your account and recent task activity." />
       </AppShell>
     );
-  }
-
-  // Google user with no profile yet — send them to finish signup
-  if (auth?.currentUser && auth?.needsProfileSetup) {
-    return <Navigate to="/signup" replace state={{ from: location, fromGoogle: true }} />;
   }
 
   if (!auth?.isAuthenticated) {
@@ -61,11 +62,6 @@ function RedirectIfAuthenticated({ children }) {
         <PageState title="Loading" description="Syncing your account." />
       </AppShell>
     );
-  }
-
-  // Google user with no profile — let them through to signup
-  if (auth?.currentUser && auth?.needsProfileSetup) {
-    return children;
   }
 
   if (auth?.isAuthenticated && auth?.role) {
@@ -223,12 +219,12 @@ export default function App() {
         }
       />
       <Route
-        path="/teen/active"
+        path="/teen/tasks"
         element={
           <RequireAuth>
             <RequireRole role="teen">
               <RequireSurveyComplete>
-                <ActiveTask />
+                <MyTasks />
               </RequireSurveyComplete>
             </RequireRole>
           </RequireAuth>
@@ -241,6 +237,18 @@ export default function App() {
             <RequireRole role="teen">
               <RequireSurveyComplete>
                 <Earnings />
+              </RequireSurveyComplete>
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/teen/notifications"
+        element={
+          <RequireAuth>
+            <RequireRole role="teen">
+              <RequireSurveyComplete>
+                <TeenNotifications />
               </RequireSurveyComplete>
             </RequireRole>
           </RequireAuth>
@@ -275,6 +283,30 @@ export default function App() {
             <RequireRole role="parent">
               <RequireParentOnboarding>
                 <ParentDashboard />
+              </RequireParentOnboarding>
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/parent/approvals"
+        element={
+          <RequireAuth>
+            <RequireRole role="parent">
+              <RequireParentOnboarding>
+                <ParentApprovals />
+              </RequireParentOnboarding>
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/parent/earnings"
+        element={
+          <RequireAuth>
+            <RequireRole role="parent">
+              <RequireParentOnboarding>
+                <ParentEarnings />
               </RequireParentOnboarding>
             </RequireRole>
           </RequireAuth>
@@ -332,6 +364,36 @@ export default function App() {
           <RequireAuth>
             <RequireRole role="neighbor">
               <PostTask />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/neighbor/tasks"
+        element={
+          <RequireAuth>
+            <RequireRole role="neighbor">
+              <NeighborTasks />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/neighbor/notifications"
+        element={
+          <RequireAuth>
+            <RequireRole role="neighbor">
+              <NeighborNotifications />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/neighbor/profile"
+        element={
+          <RequireAuth>
+            <RequireRole role="neighbor">
+              <NeighborProfile />
             </RequireRole>
           </RequireAuth>
         }
