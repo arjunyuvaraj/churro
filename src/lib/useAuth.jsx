@@ -41,6 +41,8 @@ export function AuthProvider({ children }) {
         return;
       }
 
+      setLoading(true);
+
       const userRef = doc(db, 'users', firebaseUser.uid);
       unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
         const profileData = snapshot.exists() ? snapshot.data() : null;
